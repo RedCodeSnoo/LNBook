@@ -20,7 +20,9 @@ class LnbookSystemPackage : Package {
   }
 
   override fun createReactActivityHandlers(activityContext: Context?): List<ReactActivityHandler> {
-    return if (activityContext == null) emptyList() else listOf(VolumeKeysHandler(activityContext.applicationContext))
+    // Called while the activity is being constructed: its context is not usable yet, so it
+    // is only kept here and read when a key is pressed.
+    return if (activityContext == null) emptyList() else listOf(VolumeKeysHandler(activityContext))
   }
 }
 

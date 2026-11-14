@@ -8,6 +8,6 @@ if maestro test "$1"; then
   exit 0
 fi
 echo "::group::App log"
-adb logcat -d -t 3000 -s ReactNativeJS:V ReactNative:W AndroidRuntime:E || true
+adb logcat -d -s ReactNativeJS:V AndroidRuntime:E | tail -n 150 || true
 echo "::endgroup::"
 exit 1
