@@ -16,6 +16,12 @@ export type RootStackParamList = {
   settingsGeneral: undefined;
   settingsAppearance: undefined;
   about: undefined;
+  novel: { novelId: number };
+  novelEdit: { novelId: number };
+  /** Single entry point to read a chapter, optionally at a precise place. */
+  reader: { chapterId: number; anchor?: string };
+  categories: undefined;
+  settingsLibrary: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };
 };

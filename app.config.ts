@@ -34,10 +34,28 @@ const config: ExpoConfig = {
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // "Open with": EPUB and TXT files from a file manager or another app.
+    intentFilters: [
+      {
+        action: 'VIEW',
+        category: ['DEFAULT', 'BROWSABLE'],
+        data: [
+          { scheme: 'content', mimeType: 'application/epub+zip' },
+          { scheme: 'content', mimeType: 'text/plain' },
+          { scheme: 'file', mimeType: 'application/epub+zip' },
+          { scheme: 'file', mimeType: 'text/plain' },
+        ],
+      },
+    ],
   },
   plugins: [
     'expo-sqlite',
     'expo-localization',
+    'expo-document-picker',
+    [
+      'expo-image-picker',
+      { photosPermission: false, cameraPermission: false, microphonePermission: false },
+    ],
     [
       'expo-font',
       {

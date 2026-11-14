@@ -5,14 +5,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ImportHost } from '../features/library/ImportHost';
+import { useOpenWithImport } from '../features/library/openWith';
+import { ToastHost } from '../theme/components';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 import { FONTS } from '../theme/typography';
+import { navigationRef } from './navigationRef';
 import { RootNavigator } from './RootNavigator';
 import { StartupErrorScreen } from './screens/StartupErrorScreen';
 import { startApp } from './startup';
 
 function ThemedApp() {
   const theme = useTheme();
+  useOpenWithImport();
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.colors.background);
@@ -41,9 +46,11 @@ function ThemedApp() {
   }, [theme]);
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <RootNavigator />
+      <ImportHost />
+      <ToastHost />
     </NavigationContainer>
   );
 }

@@ -15,6 +15,17 @@ module.exports = defineConfig([
     },
   },
   {
+    files: ['scripts/**', 'plugins/**', '*.config.js'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/__tests__/**', '**/*.test.*'],
     languageOptions: {
       globals: {

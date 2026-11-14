@@ -1,7 +1,7 @@
 /** Formatting of durations, dates and numbers shown in the interface. */
 import type { DateFormatSetting } from '../features/settings/settings';
 
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+type Translate = (key: string) => string;
 
 /**
  * "45 s", "12 min", "3 h 20 min", "4 j 6 h" (days beyond 24 hours).

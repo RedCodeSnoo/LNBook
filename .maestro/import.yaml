@@ -1,0 +1,15 @@
+# Runs after the sample EPUB was opened with the app ("Open with" intent).
+appId: com.redcodesnoo.lnbook
+---
+- extendedWaitUntil:
+    visible: '.*Sample Saga.*'
+    timeout: 60000
+- tapOn: '.*Sample Saga.*'
+- assertVisible: 'Ada Author'
+- assertVisible: '0 / 5 chapters'
+- scrollUntilVisible:
+    element: '.*Volume 2 – Dusk.*'
+    direction: DOWN
+- assertVisible: '.*Chapter 4: End.*'
+- tapOn: '.*Volume 2 – Dusk.*'
+- assertNotVisible: '.*Chapter 4: End.*'

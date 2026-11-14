@@ -1,8 +1,13 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { CategoriesScreen } from '../features/library/CategoriesScreen';
 import { AboutScreen } from '../features/more/AboutScreen';
+import { NovelEditScreen } from '../features/novel/NovelEditScreen';
+import { NovelScreen } from '../features/novel/NovelScreen';
+import { ReaderScreen } from '../features/reader/ReaderScreen';
 import { AppearanceSettingsScreen } from '../features/settings/AppearanceSettingsScreen';
 import { GeneralSettingsScreen } from '../features/settings/GeneralSettingsScreen';
+import { LibrarySettingsScreen } from '../features/settings/LibrarySettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
@@ -28,6 +33,11 @@ export function RootNavigator() {
       <Stack.Screen name="settingsGeneral" component={GeneralSettingsScreen} />
       <Stack.Screen name="settingsAppearance" component={AppearanceSettingsScreen} />
       <Stack.Screen name="about" component={AboutScreen} />
+      <Stack.Screen name="settingsLibrary" component={LibrarySettingsScreen} />
+      <Stack.Screen name="categories" component={CategoriesScreen} />
+      <Stack.Screen name="novel" component={NovelScreen} />
+      <Stack.Screen name="novelEdit" component={NovelEditScreen} />
+      <Stack.Screen name="reader" component={ReaderScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

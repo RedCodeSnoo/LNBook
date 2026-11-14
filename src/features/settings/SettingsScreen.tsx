@@ -7,13 +7,13 @@ import { AppBar, ListItem, Screen, type IconName } from '../../theme/components'
 interface Group {
   key: string;
   icon: IconName;
-  route?: 'settingsGeneral' | 'settingsAppearance';
+  route?: 'settingsGeneral' | 'settingsAppearance' | 'settingsLibrary';
 }
 
 const GROUPS: Group[] = [
   { key: 'general', icon: 'tune-variant', route: 'settingsGeneral' },
   { key: 'appearance', icon: 'palette-outline', route: 'settingsAppearance' },
-  { key: 'library', icon: 'bookshelf' },
+  { key: 'library', icon: 'bookshelf', route: 'settingsLibrary' },
   { key: 'reader', icon: 'book-open-page-variant-outline' },
   { key: 'voice', icon: 'account-voice' },
   { key: 'translation', icon: 'translate' },
