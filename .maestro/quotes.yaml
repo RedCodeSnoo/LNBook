@@ -3,7 +3,7 @@
 appId: com.redcodesnoo.lnbook
 ---
 - launchApp
-- tapOn: '.*Sample Saga.*'
+- tapOn: 'Sample Saga, Ada Author.*'
 - tapOn: 'Continue: Prologue'
 - extendedWaitUntil:
     visible: '.*Prologue paragraph.*'

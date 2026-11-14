@@ -2,9 +2,9 @@
 appId: com.redcodesnoo.lnbook
 ---
 - extendedWaitUntil:
-    visible: '.*Sample Saga.*'
+    visible: 'Sample Saga, Ada Author.*'
     timeout: 60000
-- tapOn: '.*Sample Saga.*'
+- tapOn: 'Sample Saga, Ada Author.*'
 - assertVisible: 'Ada Author'
 - assertVisible: '0 / 5 chapters'
 - scrollUntilVisible:
