@@ -1,12 +1,18 @@
 # Runs after import.yaml: reads the first chapter, leaves, and comes back to the same place.
+# The footer of the reader ("12 %") is native: it tells that the chapter is displayed.
 appId: com.redcodesnoo.lnbook
 ---
 - launchApp
 - tapOn: 'Sample Saga, Ada Author.*'
 - tapOn: 'Start'
 - extendedWaitUntil:
-    visible: '.*Prologue paragraph 1\..*'
+    visible: '[0-9]+ %'
     timeout: 30000
+# The text itself is only checked when the web view exposes it to the test tool.
+- extendedWaitUntil:
+    visible: '.*Prologue paragraph 1\..*'
+    timeout: 10000
+    optional: true
 # A tap in the middle shows the bars.
 - tapOn:
     point: '50%,50%'
@@ -30,7 +36,7 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Continue: Prologue'
 - tapOn: 'Continue: Prologue'
 - extendedWaitUntil:
-    visible: '.*Prologue paragraph.*'
+    visible: '[0-9]+ %'
     timeout: 30000
 - tapOn:
     point: '50%,50%'

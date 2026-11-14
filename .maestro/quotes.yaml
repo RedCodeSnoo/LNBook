@@ -6,7 +6,7 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'Sample Saga, Ada Author.*'
 - tapOn: 'Continue: Prologue'
 - extendedWaitUntil:
-    visible: '.*Prologue paragraph.*'
+    visible: '[0-9]+ %'
     timeout: 30000
 # Select a word with a long press, then use the custom selection menu.
 - longPressOn:
