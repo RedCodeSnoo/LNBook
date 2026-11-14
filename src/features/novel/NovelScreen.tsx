@@ -28,6 +28,8 @@ import {
 } from '../../theme/components';
 import { useTheme } from '../../theme/ThemeProvider';
 import { SPACING } from '../../theme/typography';
+import { QuoteList } from '../quotes/QuoteList';
+import { resetNovelProgress } from '../stats/sessionsRepository';
 import { CategoryPickerDialog } from '../library/CategoryPickerDialog';
 import { getNovelCategoryIds, removeNovelsFromLibrary } from '../library/libraryRepository';
 import {
@@ -62,7 +64,8 @@ type Prompt =
   | { kind: 'renameVolume'; volume: Volume }
   | { kind: 'volumeActions'; volume: Volume }
   | { kind: 'categories' }
-  | { kind: 'remove' };
+  | { kind: 'remove' }
+  | { kind: 'reset' };
 
 export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const { novelId } = route.params;
@@ -84,6 +87,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const [selection, setSelection] = useState<number[]>([]);
   const [prompt, setPrompt] = useState<Prompt>({ kind: 'none' });
   const [input, setInput] = useState('');
+  const [keepTimes, setKeepTimes] = useState(true);
 
   const items = useMemo(
     () =>
@@ -290,17 +294,12 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           </View>
         )
       ) : null}
+      {tab === 'quotes' ? <QuoteList novelId={novelId} /> : null}
     </View>
   );
 
   const emptyList =
-    tab === 'quotes' ? (
-      <EmptyState
-        icon="format-quote-close"
-        title={t('novel.noQuotesTitle')}
-        message={t('novel.noQuotesMessage')}
-      />
-    ) : tab === 'favorites' ? (
+    tab === 'quotes' ? null : tab === 'favorites' ? (
       <EmptyState
         icon="star-outline"
         title={t('novel.noFavoritesTitle')}
@@ -340,6 +339,19 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                   label: t('novel.edit'),
                   icon: 'pencil-outline',
                   onPress: () => navigation.navigate('novelEdit', { novelId }),
+                },
+                {
+                  label: t('reader.replacements'),
+                  icon: 'find-replace',
+                  onPress: () => navigation.navigate('replacements', { novelId }),
+                },
+                {
+                  label: t('novel.resetProgress'),
+                  icon: 'restart',
+                  onPress: () => {
+                    setKeepTimes(true);
+                    setPrompt({ kind: 'reset' });
+                  },
                 },
                 {
                   label: t('novel.expandAll'),
@@ -591,12 +603,35 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           navigation.goBack();
         }}
       />
+      <ConfirmDialog
+        visible={prompt.kind === 'reset'}
+        title={t('novel.resetProgress')}
+        message={t('novel.resetProgressMessage')}
+        confirmLabel={t('novel.resetProgressConfirm')}
+        danger
+        onClose={closePrompt}
+        onConfirm={() => {
+          closePrompt();
+          resetNovelProgress(getDb(), novelId, keepTimes);
+          invalidate('chapters', 'library', 'novel', 'history', 'stats');
+          showToast(t('novel.resetProgressDone'));
+        }}
+      >
+        <View style={styles.dialogCheck}>
+          <CheckItem
+            title={t('novel.resetKeepTimes')}
+            checked={keepTimes}
+            onPress={() => setKeepTimes((value) => !value)}
+          />
+        </View>
+      </ConfirmDialog>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   list: { paddingBottom: SPACING.xxl },
+  dialogCheck: { marginHorizontal: -SPACING.lg },
   toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.sm },
   count: { flex: 1, paddingLeft: SPACING.sm },
   search: { flex: 1, paddingLeft: SPACING.sm },

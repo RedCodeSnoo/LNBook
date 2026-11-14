@@ -1,0 +1,30 @@
+# Runs after reader.yaml: saves a quote in a new folder, finds it on the novel page and
+# checks that the reading time reached the history.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: '.*Sample Saga.*'
+- tapOn: 'Continue: Prologue'
+- extendedWaitUntil:
+    visible: '.*Prologue paragraph.*'
+    timeout: 30000
+# Select a word with a long press, then use the custom selection menu.
+- longPressOn:
+    point: '50%,45%'
+- tapOn: 'Favourite quote'
+- assertVisible: 'Folders'
+- tapOn: 'New folder'
+- inputText: 'Tragic'
+- tapOn: 'Add a folder'
+- hideKeyboard
+- tapOn: 'Save'
+- back
+- tapOn: 'Quotes'
+- scrollUntilVisible:
+    element: 'Tragic 1'
+    direction: DOWN
+- assertVisible: 'All 1'
+- back
+- tapOn: 'History'
+- assertVisible: 'Today'
+- assertVisible: 'Sample Saga'

@@ -75,3 +75,33 @@ export function formatBytes(bytes: number): string {
   }
   return `${value >= 10 ? Math.round(value) : Math.round(value * 10) / 10} ${units[unit]}`;
 }
+
+/** "Today", "Yesterday", or "Monday 9 November" for the day of a timestamp. */
+export function formatDayLabel(
+  timestamp: number,
+  language: string,
+  labels: { today: string; yesterday: string },
+  now = Date.now(),
+): string {
+  const day = startOfDay(timestamp);
+  const today = startOfDay(now);
+  if (day === today) {
+    return labels.today;
+  }
+  // Noon avoids daylight saving time surprises when stepping back one day.
+  const yesterday = new Date(today);
+  yesterday.setHours(12);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (day === startOfDay(yesterday.getTime())) {
+    return labels.yesterday;
+  }
+  const date = new Date(timestamp);
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  const text = date.toLocaleDateString(language, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

@@ -89,7 +89,20 @@
   "history": {
     "emptyTitle": "Rien dans l'historique",
     "emptyMessage": "Les chapitres que tu lis apparaîtront ici, du plus récent au plus ancien.",
-    "incognitoBanner": "Mode incognito actif : rien n'est ajouté à l'historique."
+    "incognitoBanner": "Mode incognito actif : rien n'est ajouté à l'historique.",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "removed": "Retiré de l'historique",
+    "undo": "Annuler",
+    "remove": "Retirer {{title}} de l'historique",
+    "openNovel": "Ouvrir {{title}}",
+    "search": "Rechercher une œuvre",
+    "menu": "Plus d'options",
+    "noMatch": "Aucune entrée ne correspond",
+    "clearAll": "Supprimer tout l'historique",
+    "clearAllMessage": "La progression et les statistiques sont conservées.",
+    "clearNovelTitle": "Supprimer l'historique de cette œuvre",
+    "clearNovelMessage": "Toutes les entrées de « {{title}} » quittent l'historique. La progression et les statistiques sont conservées."
   },
   "browse": {
     "emptyTitle": "Aucune source installée",
@@ -282,7 +295,12 @@
     },
     "chooseCover": "Choisir une image",
     "restoreCover": "Couverture d'origine",
-    "coverError": "L'image n'a pas pu être utilisée."
+    "coverError": "L'image n'a pas pu être utilisée.",
+    "resetProgress": "Réinitialiser la progression",
+    "resetProgressMessage": "Tous les chapitres redeviennent non lus et les positions de lecture reviennent au début.",
+    "resetProgressConfirm": "Réinitialiser",
+    "resetProgressDone": "Progression réinitialisée",
+    "resetKeepTimes": "Garder les temps de lecture dans les statistiques"
   },
   "categories": {
     "title": "Catégories",
@@ -426,6 +444,40 @@
     "ruleSampleHint": "Saisis un texte pour essayer la règle",
     "ruleMatches_one": "{{count}} occurrence dans le chapitre en cours",
     "ruleMatches_other": "{{count}} occurrences dans le chapitre en cours",
-    "rulePreviewEmpty": "(plus rien)"
+    "rulePreviewEmpty": "(plus rien)",
+    "quote": "Citation favorite",
+    "quoteUnavailable": "Cette sélection ne peut pas être enregistrée en citation."
+  },
+  "quotes": {
+    "newTitle": "Citation favorite",
+    "editTitle": "Modifier la citation",
+    "folders": "Dossiers",
+    "noFolderHint": "Aucun dossier pour l'instant : la citation est enregistrée sans dossier.",
+    "newFolder": "Nouveau dossier",
+    "addFolder": "Ajouter un dossier",
+    "editFolder": "Modifier le dossier",
+    "note": "Note",
+    "notePlaceholder": "Facultatif",
+    "saved": "Citation enregistrée",
+    "deleted": "Citation supprimée",
+    "all": "Toutes",
+    "noFolder": "Sans dossier",
+    "manageFolders": "Dossiers",
+    "search": "Rechercher dans les citations",
+    "count_one": "{{count}} citation",
+    "count_other": "{{count}} citations",
+    "sortByDate": "Trier par date d'ajout",
+    "sortByBook": "Trier dans l'ordre du livre",
+    "export": "Exporter (appui long : texte brut)",
+    "noMatch": "Aucune citation ne correspond",
+    "openHint": "Ouvre le chapitre à l'endroit de la citation",
+    "editAction": "Modifier la note et les dossiers",
+    "chapterDeleted": "Chapitre plus disponible",
+    "foldersTitle": "Dossiers de citations",
+    "foldersEmptyTitle": "Aucun dossier",
+    "foldersEmptyMessage": "Les dossiers sont communs à tous les novels. Une citation peut être dans plusieurs dossiers.",
+    "colorNumber": "Couleur {{number}}",
+    "deleteFolderTitle": "Supprimer ce dossier ?",
+    "deleteFolderMessage": "Ses citations sont gardées, elles perdent seulement ce dossier."
   }
 }

@@ -4,6 +4,7 @@ import { CategoriesScreen } from '../features/library/CategoriesScreen';
 import { AboutScreen } from '../features/more/AboutScreen';
 import { NovelEditScreen } from '../features/novel/NovelEditScreen';
 import { NovelScreen } from '../features/novel/NovelScreen';
+import { QuoteFoldersScreen } from '../features/quotes/QuoteFoldersScreen';
 import { ChapterEditScreen } from '../features/reader/ChapterEditScreen';
 import { ReaderScreen } from '../features/reader/ReaderScreen';
 import { ReplacementsScreen } from '../features/reader/ReplacementsScreen';
@@ -44,6 +45,7 @@ export function RootNavigator() {
       <Stack.Screen name="chapterEdit" component={ChapterEditScreen} />
       <Stack.Screen name="replacements" component={ReplacementsScreen} />
       <Stack.Screen name="settingsReader" component={ReaderSettingsScreen} />
+      <Stack.Screen name="quoteFolders" component={QuoteFoldersScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

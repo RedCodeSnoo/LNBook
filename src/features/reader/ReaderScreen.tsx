@@ -21,6 +21,7 @@ import {
   AppBar,
   AppText,
   EmptyState,
+  Icon,
   IconButton,
   Menu,
   Screen,
@@ -30,6 +31,10 @@ import { relativeLuminance } from '../../theme/contrast';
 import { useTheme } from '../../theme/ThemeProvider';
 import { FONTS, SPACING } from '../../theme/typography';
 import { setChapterFavorite } from '../novel/novelRepository';
+import { QuoteEditorSheet, type QuoteDraft } from '../quotes/QuoteEditorSheet';
+import { listChapterQuoteAnchors, listQuotes } from '../quotes/quotesRepository';
+import { useSetting } from '../settings/settingsStore';
+import { useReadingSession } from '../stats/useReadingSession';
 import { BookSearchSheet } from './BookSearchSheet';
 import { ChapterDrawer } from './ChapterDrawer';
 import {
@@ -58,7 +63,7 @@ type NoExtraProps = Record<never, never>;
 /** Fonts copied into the Android assets by plugins/withReaderFonts.js. */
 const FONTS_URI = 'file:///android_asset/reader-fonts';
 
-type Panel = 'none' | 'settings' | 'chapters' | 'bookSearch';
+type Panel = 'none' | 'settings' | 'chapters' | 'bookSearch' | 'quote';
 
 type RuntimeMessage =
   | { type: 'ready'; blocks: number }
@@ -96,6 +101,25 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [bookQuery, setBookQuery] = useState('');
   const [clock, setClock] = useState(() => formatTime(Date.now()));
+  const [quoteDraft, setQuoteDraft] = useState<QuoteDraft | null>(null);
+  const [quoteId, setQuoteId] = useState<number | null>(null);
+  const incognito = useSetting('incognito');
+
+  // Language displayed (null = original): quotes belong to one version of the text.
+  const lang = novel?.readingLang ?? null;
+  const chapterQuotes = useQuery(
+    () => listChapterQuoteAnchors(getDb(), chapterId, lang),
+    ['quotes'],
+    [chapterId, lang],
+  );
+  const editedQuote = useQuery(
+    () =>
+      quoteId === null || novelId === null
+        ? null
+        : (listQuotes(getDb(), { novelId }).find((quote) => quote.id === quoteId) ?? null),
+    ['quotes'],
+    [quoteId, novelId],
+  );
 
   const insets: ReaderInsets = useMemo(
     () => ({ top: safeInsets.top, bottom: safeInsets.bottom }),
@@ -144,7 +168,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           anchor: parseAnchor(current.chapter.positionAnchor),
           progress: current.chapter.progress,
           flash,
-          quotes: [],
+          quotes: chapterQuotes,
         },
         endLabel: current.next ? t('reader.nextChapter') : t('reader.lastChapter'),
         endTitle: current.next ? current.next.title : t('reader.lastChapterHint'),
@@ -181,6 +205,29 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       send(settingsCommand(settings, insets, FONTS_URI, (path) => deviceFiles.uri(path)));
     }
   }, [settings, insets, send]);
+
+  // Quotes added or removed while reading are underlined right away.
+  useEffect(() => {
+    if (ready.current) {
+      send({ name: 'quotes', list: chapterQuotes });
+    }
+  }, [chapterQuotes, send]);
+
+  // ------------------------------------------------------------------ reading time
+
+  const hasText = document !== null;
+  const session = useReadingSession(
+    novelId !== null && chapter && hasText
+      ? {
+          novelId,
+          chapterId,
+          wordCount: chapter.wordCount ?? 0,
+          startProgress: chapter.progress,
+          lang,
+          mode: 'read',
+        }
+      : null,
+  );
 
   // ------------------------------------------------------------------ leaving
 
@@ -297,6 +344,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           break;
         case 'progress':
           setProgress({ progress: message.progress, page: message.page, pages: message.pages });
+          session.progress(message.progress);
           if (!sliding.current) {
             setSliderValue(message.progress);
           }
@@ -314,7 +362,16 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           then?.();
           break;
         }
+        case 'activity':
+          session.activity();
+          break;
+        case 'quoteTap':
+          setQuoteDraft(null);
+          setQuoteId(message.id);
+          setPanel('quote');
+          break;
         case 'tap':
+          session.activity();
           setBarsVisible((visible) => !visible);
           break;
         case 'next':
@@ -346,6 +403,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       goNext,
       goPrevious,
       send,
+      session,
       setProgress,
       setSliderValue,
       setSearchState,
@@ -357,6 +415,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
 
   const menuItems = useMemo(
     () => [
+      { key: 'quote', label: t('reader.quote') },
       { key: 'copy', label: t('reader.copy') },
       { key: 'share', label: t('reader.share') },
       { key: 'searchBook', label: t('reader.searchBook') },
@@ -367,11 +426,21 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   const onMenuSelection = useCallback(
     (event: { nativeEvent: { key: string; selectedText: string } }) => {
       const text = (event.nativeEvent.selectedText || selection.current.text).trim();
+      const anchor = selection.current.anchor;
       send({ name: 'clearSelection' });
       if (text === '') {
         return;
       }
       switch (event.nativeEvent.key) {
+        case 'quote':
+          if (anchor && novelId !== null) {
+            setQuoteId(null);
+            setQuoteDraft({ novelId, chapterId, text, anchor, lang });
+            setPanel('quote');
+          } else {
+            showToast(t('reader.quoteUnavailable'));
+          }
+          break;
         case 'copy':
           void Clipboard.setStringAsync(text);
           showToast(t('reader.copied'));
@@ -387,7 +456,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           break;
       }
     },
-    [send, t],
+    [send, t, novelId, chapterId, lang],
   );
 
   // ------------------------------------------------------------------ search
@@ -610,6 +679,11 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
               onBack={navigation.goBack}
               actions={
                 <>
+                  {incognito ? (
+                    <View accessible accessibilityLabel={t('more.incognito')}>
+                      <Icon name="incognito" size={20} color={appTheme.colors.textSecondary} />
+                    </View>
+                  ) : null}
                   <IconButton
                     icon={chapter.isFavorite ? 'star' : 'star-outline'}
                     label={
@@ -745,6 +819,12 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
         onSelect={(target) =>
           target.id === chapterId ? setPanel('none') : flushThen(() => openChapter(target))
         }
+      />
+      <QuoteEditorSheet
+        visible={panel === 'quote'}
+        onClose={() => setPanel('none')}
+        draft={quoteDraft}
+        quote={editedQuote}
       />
       <BookSearchSheet
         visible={panel === 'bookSearch'}

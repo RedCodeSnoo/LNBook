@@ -89,7 +89,20 @@
   "history": {
     "emptyTitle": "Nothing in your history",
     "emptyMessage": "The chapters you read will show up here, most recent first.",
-    "incognitoBanner": "Incognito mode is on: nothing is added to the history."
+    "incognitoBanner": "Incognito mode is on: nothing is added to the history.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "removed": "Removed from the history",
+    "undo": "Undo",
+    "remove": "Remove {{title}} from the history",
+    "openNovel": "Open {{title}}",
+    "search": "Search a novel",
+    "menu": "More options",
+    "noMatch": "No matching entry",
+    "clearAll": "Delete the whole history",
+    "clearAllMessage": "Reading progress and statistics are kept.",
+    "clearNovelTitle": "Delete the history of this novel",
+    "clearNovelMessage": "Every entry of “{{title}}” leaves the history. Progress and statistics are kept."
   },
   "browse": {
     "emptyTitle": "No source installed",
@@ -282,7 +295,12 @@
     },
     "chooseCover": "Choose an image",
     "restoreCover": "Original cover",
-    "coverError": "The image could not be used."
+    "coverError": "The image could not be used.",
+    "resetProgress": "Reset the progress",
+    "resetProgressMessage": "Every chapter becomes unread and reading positions go back to the start.",
+    "resetProgressConfirm": "Reset",
+    "resetProgressDone": "Progress reset",
+    "resetKeepTimes": "Keep the reading times in the statistics"
   },
   "categories": {
     "title": "Categories",
@@ -426,6 +444,40 @@
     "ruleSampleHint": "Type a text to try the rule",
     "ruleMatches_one": "{{count}} occurrence in the current chapter",
     "ruleMatches_other": "{{count}} occurrences in the current chapter",
-    "rulePreviewEmpty": "(nothing left)"
+    "rulePreviewEmpty": "(nothing left)",
+    "quote": "Favourite quote",
+    "quoteUnavailable": "This selection cannot be saved as a quote."
+  },
+  "quotes": {
+    "newTitle": "Favourite quote",
+    "editTitle": "Edit the quote",
+    "folders": "Folders",
+    "noFolderHint": "No folder yet: the quote is saved without folder.",
+    "newFolder": "New folder",
+    "addFolder": "Add a folder",
+    "editFolder": "Edit the folder",
+    "note": "Note",
+    "notePlaceholder": "Optional",
+    "saved": "Quote saved",
+    "deleted": "Quote deleted",
+    "all": "All",
+    "noFolder": "No folder",
+    "manageFolders": "Folders",
+    "search": "Search in the quotes",
+    "count_one": "{{count}} quote",
+    "count_other": "{{count}} quotes",
+    "sortByDate": "Sort by date added",
+    "sortByBook": "Sort in book order",
+    "export": "Export (long press: plain text)",
+    "noMatch": "No matching quote",
+    "openHint": "Opens the chapter at the quote",
+    "editAction": "Edit note and folders",
+    "chapterDeleted": "Chapter no longer available",
+    "foldersTitle": "Quote folders",
+    "foldersEmptyTitle": "No folder",
+    "foldersEmptyMessage": "Folders are shared by every novel. A quote can be in several folders.",
+    "colorNumber": "Colour {{number}}",
+    "deleteFolderTitle": "Delete this folder?",
+    "deleteFolderMessage": "Its quotes are kept, they only lose this folder."
   }
 }

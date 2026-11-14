@@ -25,6 +25,7 @@ export type RootStackParamList = {
   /** Text replacement rules: global ones, plus those of a novel when given. */
   replacements: { novelId?: number; chapterId?: number };
   settingsReader: undefined;
+  quoteFolders: undefined;
   settingsLibrary: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };
