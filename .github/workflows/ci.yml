@@ -113,12 +113,11 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             adb install -r "$APK_PATH"
-            maestro test .maestro/smoke.yaml || (adb logcat -d -t 400 '*:E' ; exit 1)
+            scripts/ci-maestro.sh .maestro/smoke.yaml
             node scripts/make-sample-epub.js sample.epub
-            adb shell mkdir -p /sdcard/Android/data/com.redcodesnoo.lnbook/files
-            adb push sample.epub /sdcard/Android/data/com.redcodesnoo.lnbook/files/sample.epub
-            adb shell am start -a android.intent.action.VIEW -t application/epub+zip -d file:///sdcard/Android/data/com.redcodesnoo.lnbook/files/sample.epub com.redcodesnoo.lnbook
-            maestro test .maestro/import.yaml || (adb logcat -d -t 400 '*:E' ; exit 1)
+            scripts/ci-open-sample.sh sample.epub
+            scripts/ci-maestro.sh .maestro/import.yaml
+            scripts/ci-maestro.sh .maestro/reader.yaml
 
       - uses: actions/upload-artifact@v7
         if: failure()

@@ -1,0 +1,8 @@
+{
+  "name": "lnbook-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small Android integrations: volume keys in the reader and files shared by other apps.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

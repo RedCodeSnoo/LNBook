@@ -20,7 +20,11 @@ import { findDuplicateNovel, importParsedBook } from './importBook';
 
 export interface ImportSource {
   name: string;
-  uri: string;
+  /** null when the file could not even be received (see `error`). */
+  uri: string | null;
+  error?: string | null;
+  /** The file is a private copy made for the import: delete it afterwards. */
+  temporary?: boolean;
 }
 
 export type DuplicateChoice = 'replace' | 'keepBoth' | 'skip';
@@ -78,7 +82,10 @@ function errorMessage(error: unknown): string {
   if (error instanceof BookImportError) {
     return i18n.t(ERROR_KEYS[error.code]);
   }
-  return i18n.t('import.errorUnknown');
+  // The technical reason helps to report a problem with a specific file.
+  const detail = error instanceof Error ? error.message : String(error);
+  console.warn('Import failed', error);
+  return `${i18n.t('import.errorUnknown')} (${detail.slice(0, 200)})`;
 }
 
 /** PK.. = zip archive (EPUB), used when the file name has no usable extension. */
@@ -117,21 +124,44 @@ async function readBook(source: ImportSource, data: Uint8Array): Promise<ParsedB
   throw new BookImportError('unsupported', 'Unsupported file type');
 }
 
+function removeTemporary(source: ImportSource): void {
+  if (!source.temporary || !source.uri) {
+    return;
+  }
+  try {
+    new File(source.uri).delete();
+  } catch {
+    // The cache is cleaned by Android anyway.
+  }
+}
+
 let running = false;
+const waiting: ImportSource[] = [];
 
 /** Imports the given files one after the other, then shows a summary. */
-export async function importFiles(sources: ImportSource[]): Promise<void> {
-  if (running || sources.length === 0) {
+export async function importFiles(list: ImportSource[]): Promise<void> {
+  if (running) {
+    // Files received during an import are handled right after it.
+    waiting.push(...list);
+    return;
+  }
+  const sources = [...list];
+  if (sources.length === 0) {
     return;
   }
   running = true;
   const imported: string[] = [];
   const failed: { name: string; reason: string }[] = [];
   try {
-    for (const [index, source] of sources.entries()) {
+    for (let index = 0; index < sources.length; index += 1) {
+      const source = sources[index];
+      sources.push(...waiting.splice(0));
       setStep({ kind: 'working', name: source.name, index, total: sources.length });
       await nextFrame();
       try {
+        if (!source.uri) {
+          throw new Error(source.error ?? 'File not received');
+        }
         const data = await new File(source.uri).bytes();
         const book = await readBook(source, data);
         if (!book) {
@@ -156,10 +186,15 @@ export async function importFiles(sources: ImportSource[]): Promise<void> {
         invalidate('library', 'novel', 'chapters');
       } catch (error) {
         failed.push({ name: source.name, reason: errorMessage(error) });
+      } finally {
+        removeTemporary(source);
       }
     }
   } finally {
     running = false;
+  }
+  if (waiting.length > 0) {
+    void importFiles(waiting.splice(0));
   }
   if (failed.length > 0 || imported.length > 1) {
     setStep({ kind: 'summary', imported, failed });

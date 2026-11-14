@@ -46,6 +46,17 @@ const config: ExpoConfig = {
           { scheme: 'file', mimeType: 'text/plain' },
         ],
       },
+      // "Share to": files sent by another app.
+      {
+        action: 'SEND',
+        category: ['DEFAULT'],
+        data: [{ mimeType: 'application/epub+zip' }, { mimeType: 'text/plain' }],
+      },
+      {
+        action: 'SEND_MULTIPLE',
+        category: ['DEFAULT'],
+        data: [{ mimeType: 'application/epub+zip' }, { mimeType: 'text/plain' }],
+      },
     ],
   },
   plugins: [
@@ -87,6 +98,7 @@ const config: ExpoConfig = {
       },
     ],
     './plugins/withReleaseSigning',
+    './plugins/withReaderFonts',
   ],
 };
 
