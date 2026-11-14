@@ -46,6 +46,13 @@ jobs:
       - name: Tests
         run: npm test -- --ci
 
+      - name: Validate the exported EPUB with epubcheck
+        run: |
+          EPUB_OUT="$RUNNER_TEMP/export.epub" npx jest src/epub/__tests__/buildEpub.test.ts --ci
+          curl -fsSL -o "$RUNNER_TEMP/epubcheck.zip" https://github.com/w3c/epubcheck/releases/download/v5.4.0/epubcheck-5.4.0.zip
+          unzip -q "$RUNNER_TEMP/epubcheck.zip" -d "$RUNNER_TEMP"
+          java -jar "$RUNNER_TEMP/epubcheck-5.4.0/epubcheck.jar" "$RUNNER_TEMP/export.epub"
+
       # Real plugins against the real sites: informative only, a site can be down.
       - name: Live source tests
         continue-on-error: true
