@@ -1,0 +1,125 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "close": "Close",
+    "search": "Search",
+    "comingSoon": "Coming soon",
+    "comingSoonHint": "This part arrives in a future version."
+  },
+  "tabs": {
+    "library": "Library",
+    "updates": "Updates",
+    "history": "History",
+    "browse": "Browse",
+    "more": "More"
+  },
+  "library": {
+    "online": "Online",
+    "local": "Local",
+    "emptyOnlineTitle": "No online novel",
+    "emptyOnlineMessage": "Add novels from a source to follow them here.",
+    "emptyLocalTitle": "Your library is empty",
+    "emptyLocalMessage": "Import an EPUB or a text file to start reading.",
+    "browseSources": "Browse sources",
+    "importFile": "Import an EPUB"
+  },
+  "updates": {
+    "emptyTitle": "No new chapter",
+    "emptyMessage": "New chapters of the novels you follow will show up here."
+  },
+  "history": {
+    "emptyTitle": "Nothing in your history",
+    "emptyMessage": "The chapters you read will show up here, most recent first.",
+    "incognitoBanner": "Incognito mode is on: nothing is added to the history."
+  },
+  "browse": {
+    "emptyTitle": "No source installed",
+    "emptyMessage": "Install a source from the catalogue to search and read novels online.",
+    "openCatalog": "Open the catalogue"
+  },
+  "more": {
+    "incognito": "Incognito mode",
+    "incognitoHint": "No history or statistics recorded",
+    "downloads": "Downloads",
+    "statistics": "Statistics",
+    "quotes": "Quotes",
+    "settings": "Settings",
+    "backup": "Backup and restore",
+    "about": "About"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "generalHint": "Language, start tab, date format",
+    "appearance": "Appearance",
+    "appearanceHint": "Theme, accent colour, interface size",
+    "library": "Library",
+    "libraryHint": "Display, columns, badges, categories",
+    "reader": "Reader",
+    "readerHint": "Display, \"read\" threshold, volume buttons",
+    "voice": "Voice",
+    "voiceHint": "Engine, voice, speed, pitch",
+    "translation": "Translation",
+    "translationHint": "Engine, DeepL key, offline models",
+    "downloads": "Downloads",
+    "downloadsHint": "Export folder, Wi-Fi only, delay between requests",
+    "updates": "Updates",
+    "updatesHint": "Check frequency, notifications",
+    "sources": "Sources",
+    "sourcesHint": "Plugin repositories, displayed languages",
+    "advanced": "Advanced",
+    "advancedHint": "User-Agent, cookies, cache, logs",
+    "language": "Interface language",
+    "languageSystem": "Phone language",
+    "languageFr": "Français",
+    "languageEn": "English",
+    "startTab": "Start tab",
+    "dateFormat": "Date format",
+    "dateFormatSystem": "Based on language",
+    "dateFormatDmy": "Day/month/year",
+    "dateFormatMdy": "Month/day/year",
+    "dateFormatYmd": "Year-month-day",
+    "theme": "App theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAmoled": "AMOLED night",
+    "accent": "Accent colour",
+    "accentDynamic": "Dynamic colours (Material You)",
+    "accentDynamicHint": "Uses the colours of your wallpaper",
+    "uiScale": "Interface size",
+    "uiScaleSmall": "Small",
+    "uiScaleNormal": "Normal",
+    "uiScaleLarge": "Large",
+    "uiScaleExtraLarge": "Extra large",
+    "preview": "Preview",
+    "previewText": "Interface text looks like this.",
+    "accentNames": {
+      "indigo": "Indigo",
+      "blue": "Blue",
+      "teal": "Teal",
+      "green": "Green",
+      "amber": "Amber",
+      "orange": "Orange",
+      "rose": "Rose",
+      "violet": "Violet"
+    }
+  },
+  "about": {
+    "title": "About",
+    "version": "Version",
+    "repository": "GitHub repository",
+    "licenses": "Open source licences"
+  },
+  "errors": {
+    "startupTitle": "The app could not start",
+    "startupMessage": "The database could not be opened. Your data has not been modified.",
+    "databaseTooRecent": "The data was created by a newer version of the app. Install the latest version.",
+    "unexpected": "An unexpected error occurred."
+  }
+}

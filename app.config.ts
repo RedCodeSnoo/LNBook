@@ -36,6 +36,29 @@ const config: ExpoConfig = {
     predictiveBackGestureEnabled: false,
   },
   plugins: [
+    'expo-sqlite',
+    'expo-localization',
+    [
+      'expo-font',
+      {
+        fonts: [
+          'node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf',
+          'node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf',
+          'node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf',
+          'node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf',
+        ],
+      },
+    ],
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 160,
+        resizeMode: 'contain',
+        backgroundColor: '#FAFAFC',
+        dark: { backgroundColor: '#121316' },
+      },
+    ],
     [
       'expo-build-properties',
       {

@@ -1,0 +1,125 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "comingSoon": "Bientôt disponible",
+    "comingSoonHint": "Cette partie arrive dans une prochaine version."
+  },
+  "tabs": {
+    "library": "Bibliothèque",
+    "updates": "Mises à jour",
+    "history": "Historique",
+    "browse": "Parcourir",
+    "more": "Plus"
+  },
+  "library": {
+    "online": "En ligne",
+    "local": "Local",
+    "emptyOnlineTitle": "Aucun novel en ligne",
+    "emptyOnlineMessage": "Ajoute des novels depuis une source pour les suivre ici.",
+    "emptyLocalTitle": "Ta bibliothèque est vide",
+    "emptyLocalMessage": "Importe un EPUB ou un fichier texte pour commencer à lire.",
+    "browseSources": "Parcourir les sources",
+    "importFile": "Importer un EPUB"
+  },
+  "updates": {
+    "emptyTitle": "Aucun nouveau chapitre",
+    "emptyMessage": "Les nouveaux chapitres des novels que tu suis apparaîtront ici."
+  },
+  "history": {
+    "emptyTitle": "Rien dans l'historique",
+    "emptyMessage": "Les chapitres que tu lis apparaîtront ici, du plus récent au plus ancien.",
+    "incognitoBanner": "Mode incognito actif : rien n'est ajouté à l'historique."
+  },
+  "browse": {
+    "emptyTitle": "Aucune source installée",
+    "emptyMessage": "Installe une source depuis le catalogue pour chercher et lire des novels en ligne.",
+    "openCatalog": "Ouvrir le catalogue"
+  },
+  "more": {
+    "incognito": "Mode incognito",
+    "incognitoHint": "Aucun historique ni statistique enregistré",
+    "downloads": "Téléchargements",
+    "statistics": "Statistiques",
+    "quotes": "Citations",
+    "settings": "Paramètres",
+    "backup": "Sauvegarde et restauration",
+    "about": "À propos"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "general": "Général",
+    "generalHint": "Langue, onglet de démarrage, format de date",
+    "appearance": "Apparence",
+    "appearanceHint": "Thème, couleur d'accent, taille de l'interface",
+    "library": "Bibliothèque",
+    "libraryHint": "Affichage, colonnes, badges, catégories",
+    "reader": "Lecteur",
+    "readerHint": "Affichage, seuil « lu », boutons de volume",
+    "voice": "Voix",
+    "voiceHint": "Moteur, voix, vitesse, ton",
+    "translation": "Traduction",
+    "translationHint": "Moteur, clé DeepL, modèles hors ligne",
+    "downloads": "Téléchargements",
+    "downloadsHint": "Dossier d'export, Wi-Fi uniquement, délai entre requêtes",
+    "updates": "Mises à jour",
+    "updatesHint": "Fréquence de vérification, notifications",
+    "sources": "Sources",
+    "sourcesHint": "Dépôts de plugins, langues affichées",
+    "advanced": "Avancé",
+    "advancedHint": "User-Agent, cookies, cache, journaux",
+    "language": "Langue de l'interface",
+    "languageSystem": "Langue du téléphone",
+    "languageFr": "Français",
+    "languageEn": "English",
+    "startTab": "Onglet de démarrage",
+    "dateFormat": "Format de date",
+    "dateFormatSystem": "Selon la langue",
+    "dateFormatDmy": "Jour/mois/année",
+    "dateFormatMdy": "Mois/jour/année",
+    "dateFormatYmd": "Année-mois-jour",
+    "theme": "Thème de l'app",
+    "themeSystem": "Système",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeAmoled": "Nuit AMOLED",
+    "accent": "Couleur d'accent",
+    "accentDynamic": "Couleurs dynamiques (Material You)",
+    "accentDynamicHint": "Utilise les couleurs de ton fond d'écran",
+    "uiScale": "Taille de l'interface",
+    "uiScaleSmall": "Petite",
+    "uiScaleNormal": "Normale",
+    "uiScaleLarge": "Grande",
+    "uiScaleExtraLarge": "Très grande",
+    "preview": "Aperçu",
+    "previewText": "Le texte de l'interface ressemble à ceci.",
+    "accentNames": {
+      "indigo": "Indigo",
+      "blue": "Bleu",
+      "teal": "Sarcelle",
+      "green": "Vert",
+      "amber": "Ambre",
+      "orange": "Orange",
+      "rose": "Rose",
+      "violet": "Violet"
+    }
+  },
+  "about": {
+    "title": "À propos",
+    "version": "Version",
+    "repository": "Dépôt GitHub",
+    "licenses": "Licences open source"
+  },
+  "errors": {
+    "startupTitle": "L'app n'a pas pu démarrer",
+    "startupMessage": "La base de données n'a pas pu être ouverte. Tes données n'ont pas été modifiées.",
+    "databaseTooRecent": "Les données ont été créées par une version plus récente de l'app. Installe la dernière version.",
+    "unexpected": "Une erreur inattendue s'est produite."
+  }
+}

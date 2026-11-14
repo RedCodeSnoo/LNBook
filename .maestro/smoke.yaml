@@ -1,0 +1,23 @@
+# Smoke test: the app starts and the five tabs open (emulator language: English).
+appId: com.redcodesnoo.lnbook
+---
+- launchApp:
+    clearState: true
+- assertVisible: 'Library'
+- assertVisible: 'Your library is empty|No online novel'
+- tapOn: 'Updates'
+- assertVisible: 'No new chapter'
+- tapOn: 'History'
+- assertVisible: 'Nothing in your history'
+- tapOn: 'Browse'
+- assertVisible: 'No source installed'
+- tapOn: 'More'
+- assertVisible: 'Incognito mode'
+- tapOn: 'Settings'
+- tapOn: 'Appearance'
+- tapOn: 'Dark'
+- assertVisible: 'Accent colour'
+- back
+- back
+- back
+- assertVisible: 'Library'
