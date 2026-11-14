@@ -41,6 +41,17 @@ export interface AppSettings {
   sourceLanguages: string[];
   /** User-Agent sent to the sites, by plugins and by the web view. */
   userAgent: string;
+
+  // Downloads
+  downloadWifiOnly: boolean;
+  /** Milliseconds between two requests to the same site. */
+  downloadDelayMs: number;
+
+  // New chapters
+  /** Hours between two background checks (6, 12 or 24); 0 = never. */
+  updateCheckHours: number;
+  updateWifiOnly: boolean;
+  notifyNewChapters: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -67,6 +78,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   sourceLanguages: ['Français', 'English'],
   userAgent: DEFAULT_USER_AGENT,
+
+  downloadWifiOnly: false,
+  downloadDelayMs: 1000,
+
+  updateCheckHours: 12,
+  updateWifiOnly: false,
+  notifyNewChapters: true,
 };
 
 export type SettingKey = keyof AppSettings;

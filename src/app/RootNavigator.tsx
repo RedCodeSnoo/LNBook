@@ -5,6 +5,8 @@ import { GlobalSearchScreen } from '../features/browse/GlobalSearchScreen';
 import { PluginSettingsScreen } from '../features/browse/PluginSettingsScreen';
 import { SourceScreen } from '../features/browse/SourceScreen';
 import { WebViewScreen } from '../features/browse/WebViewScreen';
+import { DownloadsScreen } from '../features/downloads/DownloadsScreen';
+import { StorageScreen } from '../features/downloads/StorageScreen';
 import { CategoriesScreen } from '../features/library/CategoriesScreen';
 import { AboutScreen } from '../features/more/AboutScreen';
 import { NovelEditScreen } from '../features/novel/NovelEditScreen';
@@ -18,6 +20,8 @@ import { GeneralSettingsScreen } from '../features/settings/GeneralSettingsScree
 import { LibrarySettingsScreen } from '../features/settings/LibrarySettingsScreen';
 import { ReaderSettingsScreen } from '../features/settings/ReaderSettingsScreen';
 import { SourcesSettingsScreen } from '../features/settings/SourcesSettingsScreen';
+import { DownloadSettingsScreen } from '../features/settings/DownloadSettingsScreen';
+import { UpdateSettingsScreen } from '../features/settings/UpdateSettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
@@ -58,6 +62,10 @@ export function RootNavigator() {
       <Stack.Screen name="webview" component={WebViewScreen} />
       <Stack.Screen name="pluginSettings" component={PluginSettingsScreen} />
       <Stack.Screen name="settingsSources" component={SourcesSettingsScreen} />
+      <Stack.Screen name="downloads" component={DownloadsScreen} />
+      <Stack.Screen name="storage" component={StorageScreen} />
+      <Stack.Screen name="settingsDownloads" component={DownloadSettingsScreen} />
+      <Stack.Screen name="settingsUpdates" component={UpdateSettingsScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

@@ -1,6 +1,7 @@
 package expo.modules.lnbooksystem
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
 import expo.modules.kotlin.modules.Module
@@ -37,6 +38,31 @@ class LnbookSystemModule : Module() {
 
     Function("setVolumeKeysEnabled") { enabled: Boolean ->
       SystemState.volumeKeysEnabled = enabled
+    }
+
+    // Foreground service of the download queue (progress notification, screen off).
+    Function("startDownloadService") { channelName: String, title: String, text: String ->
+      val context = appContext.reactContext ?: return@Function false
+      try {
+        DownloadService.ensureChannel(context, channelName)
+        val intent = Intent(context, DownloadService::class.java)
+          .putExtra(DownloadService.EXTRA_TITLE, title)
+          .putExtra(DownloadService.EXTRA_TEXT, text)
+        context.startForegroundService(intent)
+        true
+      } catch (error: Exception) {
+        false
+      }
+    }
+
+    Function("updateDownloadService") { title: String, text: String, progress: Int, max: Int ->
+      appContext.reactContext?.let { DownloadService.update(it, title, text, progress, max) }
+      Unit
+    }
+
+    Function("stopDownloadService") {
+      appContext.reactContext?.let { it.stopService(Intent(it, DownloadService::class.java)) }
+      Unit
     }
 
     Function("isMusicActive") {

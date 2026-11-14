@@ -1,0 +1,13 @@
+# Downloads, storage and the Updates tab open and show their content.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Downloads'
+- assertVisible: 'Storage'
+- tapOn: 'Storage'
+- assertVisible: 'Clear the image cache'
+- tapOn: 'Back'
+- tapOn: 'Back'
+- tapOn: 'Updates'
+- assertVisible: 'Check for new chapters'

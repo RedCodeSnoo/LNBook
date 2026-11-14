@@ -5,8 +5,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { resumeDownloadsAtLaunch } from '../features/downloads/downloadService';
 import { ImportHost } from '../features/library/ImportHost';
 import { useOpenWithImport } from '../features/library/openWith';
+import { checkAtLaunchIfDue, syncBackgroundCheck } from '../features/updates/updateService';
+import { watchNotificationTaps } from '../services/notifications';
 import { ToastHost } from '../theme/components';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 import { FONTS } from '../theme/typography';
@@ -18,6 +21,14 @@ import { startApp } from './startup';
 function ThemedApp() {
   const theme = useTheme();
   useOpenWithImport();
+
+  // Work that continues from one launch to the next: downloads, new chapter checks.
+  useEffect(() => {
+    resumeDownloadsAtLaunch();
+    checkAtLaunchIfDue();
+    void syncBackgroundCheck();
+    return watchNotificationTaps();
+  }, []);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.colors.background);

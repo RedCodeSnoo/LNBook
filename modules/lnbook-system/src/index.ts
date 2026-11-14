@@ -11,6 +11,9 @@ interface LnbookSystemModule {
   setVolumeKeysEnabled(enabled: boolean): void;
   isMusicActive(): boolean;
   takeIncomingFiles(): Promise<IncomingFile[]>;
+  startDownloadService(channelName: string, title: string, text: string): boolean;
+  updateDownloadService(title: string, text: string, progress: number, max: number): void;
+  stopDownloadService(): void;
   addListener(
     event: 'onVolumeKey',
     listener: (event: { direction: 'up' | 'down' }) => void,
@@ -43,4 +46,25 @@ export function takeIncomingFiles(): Promise<IncomingFile[]> {
 
 export function addIncomingFilesListener(listener: () => void): EventSubscription {
   return native.addListener('onIncomingFiles', listener);
+}
+
+/**
+ * Shows the download notification and keeps the app alive while the queue runs.
+ * Returns false when Android refused to start the service.
+ */
+export function startDownloadService(channelName: string, title: string, text: string): boolean {
+  return native.startDownloadService(channelName, title, text);
+}
+
+export function updateDownloadService(
+  title: string,
+  text: string,
+  progress: number,
+  max: number,
+): void {
+  native.updateDownloadService(title, text, progress, max);
+}
+
+export function stopDownloadService(): void {
+  native.stopDownloadService();
 }

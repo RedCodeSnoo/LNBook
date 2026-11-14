@@ -27,7 +27,7 @@ export function MoreScreen({ navigation }: TabScreenProps<'more'>) {
         <ListItem
           icon="download-outline"
           title={t('more.downloads')}
-          onPress={soon('more.downloads', 'download-outline')}
+          onPress={() => navigation.navigate('downloads')}
         />
         <ListItem
           icon="chart-box-outline"

@@ -30,6 +30,11 @@ import {
 import { useTheme } from '../../theme/ThemeProvider';
 import { SPACING } from '../../theme/typography';
 import { SourceErrorView } from '../browse/SourceBits';
+import { queueDownloads } from '../downloads/downloadService';
+import { selectChapters, type DownloadSelection } from '../downloads/downloadsRepository';
+import { deleteChapterDownloads } from '../downloads/storage';
+import { setNovelUpdateOptions } from '../updates/updateChecker';
+import { exportNovelToDevice } from './exportToDevice';
 import { setNovelInLibrary } from '../browse/sourceNovels';
 import { sourcePageUrl, useSourceNovel } from '../browse/useSourceNovel';
 import { QuoteList } from '../quotes/QuoteList';
@@ -69,7 +74,10 @@ type Prompt =
   | { kind: 'volumeActions'; volume: Volume }
   | { kind: 'categories' }
   | { kind: 'remove' }
-  | { kind: 'reset' };
+  | { kind: 'reset' }
+  | { kind: 'download' }
+  | { kind: 'downloadRange' }
+  | { kind: 'export' };
 
 export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const { novelId } = route.params;
@@ -115,6 +123,34 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   );
 
   const source = useSourceNovel(novel, chapters.length);
+
+  const download = (choice: DownloadSelection | number[]) => {
+    const ids = Array.isArray(choice)
+      ? choice
+      : selectChapters(chapters, choice, novel?.lastReadChapterId ?? null);
+    const added = queueDownloads(ids);
+    showToast(added > 0 ? t('downloads.queued', { count: added }) : t('downloads.nothingToQueue'));
+    setPrompt({ kind: 'none' });
+    setInput('');
+  };
+
+  const exportEpub = (target: 'folder' | 'share') => {
+    setPrompt({ kind: 'none' });
+    showToast(t('novel.exporting'));
+    void exportNovelToDevice(novelId, target).then((outcome) => {
+      if (outcome.status === 'saved' || outcome.status === 'shared') {
+        showToast(
+          outcome.missing > 0
+            ? t('novel.exportedPartial', { count: outcome.missing })
+            : t('novel.exported'),
+        );
+      } else if (outcome.status === 'empty') {
+        showToast(t('novel.exportEmpty'));
+      } else if (outcome.status === 'failed') {
+        showToast(t('novel.exportFailed'));
+      }
+    });
+  };
 
   const selectionMode = selection.length > 0;
   const clearSelection = useCallback(() => setSelection([]), []);
@@ -370,8 +406,49 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                   icon: 'pencil-outline',
                   onPress: () => navigation.navigate('novelEdit', { novelId }),
                 },
+                {
+                  label: t('novel.exportEpub'),
+                  icon: 'book-arrow-up-outline',
+                  onPress: () => setPrompt({ kind: 'export' }),
+                },
                 ...(source.online
                   ? [
+                      {
+                        label: t('downloads.download'),
+                        icon: 'download-outline' as const,
+                        onPress: () => setPrompt({ kind: 'download' }),
+                      },
+                      {
+                        label: novel.notifyUpdates
+                          ? t('updates.muteNovel')
+                          : t('updates.unmuteNovel'),
+                        icon: novel.notifyUpdates
+                          ? ('bell-off-outline' as const)
+                          : ('bell-outline' as const),
+                        onPress: () => {
+                          setNovelUpdateOptions(getDb(), [novelId], {
+                            notifyUpdates: !novel.notifyUpdates,
+                          });
+                          invalidate('novel');
+                        },
+                      },
+                      {
+                        label: novel.autoDownload
+                          ? t('updates.autoDownloadOff')
+                          : t('updates.autoDownloadOn'),
+                        icon: 'download-circle-outline' as const,
+                        onPress: () => {
+                          setNovelUpdateOptions(getDb(), [novelId], {
+                            autoDownload: !novel.autoDownload,
+                          });
+                          invalidate('novel');
+                          showToast(
+                            novel.autoDownload
+                              ? t('updates.autoDownloadDisabled')
+                              : t('updates.autoDownloadEnabled'),
+                          );
+                        },
+                      },
                       {
                         label: t('novel.refresh'),
                         icon: 'refresh' as const,
@@ -477,6 +554,28 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
             { backgroundColor: colors.surface, borderTopColor: colors.border },
           ]}
         >
+          {source.online ? (
+            <>
+              <IconButton
+                icon="download-outline"
+                label={t('downloads.download')}
+                onPress={() => {
+                  download(selection);
+                  clearSelection();
+                }}
+              />
+              <IconButton
+                icon="download-off-outline"
+                label={t('downloads.removeSelected')}
+                onPress={() => {
+                  const removed = deleteChapterDownloads(getDb(), deviceFiles, selection);
+                  showToast(t('downloads.removed', { count: removed }));
+                  invalidate('chapters', 'library', 'downloads', 'chapterContent');
+                  clearSelection();
+                }}
+              />
+            </>
+          ) : null}
           <IconButton
             icon="check-all"
             label={t('library.markRead')}
@@ -672,6 +771,82 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           navigation.goBack();
         }}
       />
+      <BottomSheet
+        visible={prompt.kind === 'download'}
+        title={t('downloads.download')}
+        onClose={closePrompt}
+      >
+        <ListItem
+          icon="download-multiple"
+          title={t('downloads.all')}
+          onPress={() => download({ kind: 'all' })}
+        />
+        <ListItem
+          icon="eye-off-outline"
+          title={t('downloads.unread')}
+          onPress={() => download({ kind: 'unread' })}
+        />
+        <ListItem
+          icon="numeric-10-box-outline"
+          title={t('downloads.next', { count: 10 })}
+          onPress={() => download({ kind: 'next', count: 10 })}
+        />
+        <ListItem
+          icon="numeric-9-plus-box-outline"
+          title={t('downloads.next', { count: 50 })}
+          onPress={() => download({ kind: 'next', count: 50 })}
+        />
+        <ListItem
+          icon="arrow-expand-horizontal"
+          title={t('downloads.range')}
+          onPress={() => {
+            setInput(`1-${chapters.length}`);
+            setPrompt({ kind: 'downloadRange' });
+          }}
+        />
+      </BottomSheet>
+      <Dialog
+        visible={prompt.kind === 'downloadRange'}
+        title={t('downloads.range')}
+        message={t('downloads.rangeHint', { count: chapters.length })}
+        onClose={closePrompt}
+        actions={[
+          { label: t('common.cancel'), onPress: closePrompt },
+          {
+            label: t('downloads.download'),
+            disabled: !/^\s*\d+\s*[-–]\s*\d+\s*$/.test(input),
+            onPress: () => {
+              const [from, to] = input.split(/[-–]/).map((part) => Number(part.trim()));
+              download({ kind: 'range', from, to });
+            },
+          },
+        ]}
+      >
+        <TextField
+          autoFocus
+          value={input}
+          onChangeText={setInput}
+          placeholder="1-200"
+          accessibilityLabel={t('downloads.range')}
+          keyboardType="numbers-and-punctuation"
+        />
+      </Dialog>
+      <BottomSheet
+        visible={prompt.kind === 'export'}
+        title={t('novel.exportEpub')}
+        onClose={closePrompt}
+      >
+        <ListItem
+          icon="folder-outline"
+          title={t('novel.exportToFolder')}
+          onPress={() => exportEpub('folder')}
+        />
+        <ListItem
+          icon="share-variant-outline"
+          title={t('novel.exportShare')}
+          onPress={() => exportEpub('share')}
+        />
+      </BottomSheet>
       <ConfirmDialog
         visible={prompt.kind === 'reset'}
         title={t('novel.resetProgress')}

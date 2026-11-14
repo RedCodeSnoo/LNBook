@@ -33,6 +33,10 @@ export type RootStackParamList = {
   webview: { url: string; pluginId?: string; title?: string };
   pluginSettings: { pluginId: string };
   settingsSources: undefined;
+  downloads: undefined;
+  storage: undefined;
+  settingsDownloads: undefined;
+  settingsUpdates: undefined;
   settingsLibrary: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };

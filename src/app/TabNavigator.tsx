@@ -6,6 +6,9 @@ import { HistoryScreen } from '../features/history/HistoryScreen';
 import { LibraryScreen } from '../features/library/LibraryScreen';
 import { MoreScreen } from '../features/more/MoreScreen';
 import { getSetting } from '../features/settings/settingsStore';
+import { getDb } from '../db/client';
+import { useQuery } from '../db/invalidation';
+import { countUnreadUpdates } from '../features/updates/updateChecker';
 import { UpdatesScreen } from '../features/updates/UpdatesScreen';
 import { Icon, type IconName } from '../theme/components';
 import { useTheme, useUiScale } from '../theme/ThemeProvider';
@@ -26,6 +29,7 @@ export function TabNavigator() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const scale = useUiScale();
+  const unreadUpdates = useQuery(() => countUnreadUpdates(getDb()), ['updates', 'chapters']);
 
   return (
     <Tab.Navigator
@@ -47,7 +51,16 @@ export function TabNavigator() {
       })}
     >
       <Tab.Screen name="library" component={LibraryScreen} options={{ title: t('tabs.library') }} />
-      <Tab.Screen name="updates" component={UpdatesScreen} options={{ title: t('tabs.updates') }} />
+      <Tab.Screen
+        name="updates"
+        component={UpdatesScreen}
+        options={{
+          title: t('tabs.updates'),
+          // Number of new chapters that have not been read yet.
+          tabBarBadge: unreadUpdates > 0 ? (unreadUpdates > 99 ? '99+' : unreadUpdates) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primary as string, color: colors.onPrimary },
+        }}
+      />
       <Tab.Screen name="history" component={HistoryScreen} options={{ title: t('tabs.history') }} />
       <Tab.Screen name="browse" component={BrowseScreen} options={{ title: t('tabs.browse') }} />
       <Tab.Screen name="more" component={MoreScreen} options={{ title: t('tabs.more') }} />

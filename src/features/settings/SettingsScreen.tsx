@@ -12,7 +12,9 @@ interface Group {
     | 'settingsAppearance'
     | 'settingsLibrary'
     | 'settingsReader'
-    | 'settingsSources';
+    | 'settingsSources'
+    | 'settingsDownloads'
+    | 'settingsUpdates';
 }
 
 const GROUPS: Group[] = [
@@ -22,8 +24,8 @@ const GROUPS: Group[] = [
   { key: 'reader', icon: 'book-open-page-variant-outline', route: 'settingsReader' },
   { key: 'voice', icon: 'account-voice' },
   { key: 'translation', icon: 'translate' },
-  { key: 'downloads', icon: 'download-outline' },
-  { key: 'updates', icon: 'bell-outline' },
+  { key: 'downloads', icon: 'download-outline', route: 'settingsDownloads' },
+  { key: 'updates', icon: 'bell-outline', route: 'settingsUpdates' },
   { key: 'sources', icon: 'puzzle-outline', route: 'settingsSources' },
   { key: 'advanced', icon: 'wrench-outline' },
 ];

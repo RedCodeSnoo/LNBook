@@ -97,6 +97,8 @@ const config: ExpoConfig = {
         },
       },
     ],
+    'expo-notifications',
+    'expo-background-task',
     './plugins/withReleaseSigning',
     './plugins/withReaderFonts',
   ],
