@@ -94,6 +94,13 @@ const config: ExpoConfig = {
         android: {
           minSdkVersion: 26,
           buildArchs: ['arm64-v8a', 'armeabi-v7a'],
+          // WorkManager (background checks) creates its Room database by reflection:
+          // the code shrinker must keep those classes and their constructors.
+          extraProguardRules: [
+            '-keep class * extends androidx.room.RoomDatabase { <init>(); }',
+            '-keep class androidx.work.impl.WorkDatabase_Impl { *; }',
+            '-keep class androidx.work.impl.** { <init>(...); }',
+          ].join('\n'),
         },
       },
     ],
