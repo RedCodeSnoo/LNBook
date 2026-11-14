@@ -8,3 +8,12 @@ export { Divider, ListItem, RadioItem, SectionHeader, SwitchItem } from './ListI
 export { Screen } from './Screen';
 export { SegmentedTabs } from './SegmentedTabs';
 export { Skeleton } from './Skeleton';
+export { BottomSheet } from './BottomSheet';
+export { CheckItem } from './CheckItem';
+export { Chip } from './Chip';
+export { ConfirmDialog, Dialog, type DialogAction } from './Dialog';
+export { Fab } from './Fab';
+export { Menu, type MenuItem } from './Menu';
+export { TextField } from './TextField';
+export { hideToast, showToast, ToastHost } from './Toast';
+export { Cover, coverUri } from './Cover';
