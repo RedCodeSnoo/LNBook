@@ -25,6 +25,7 @@ export function UpdateSettingsScreen({ navigation }: RootScreenProps<'settingsUp
   const hours = useSetting('updateCheckHours');
   const wifiOnly = useSetting('updateWifiOnly');
   const notify = useSetting('notifyNewChapters');
+  const checkApp = useSetting('checkAppUpdates');
   const categories = useQuery(() => listCategories(getDb()), ['categories']);
 
   return (
@@ -60,6 +61,14 @@ export function UpdateSettingsScreen({ navigation }: RootScreenProps<'settingsUp
               void ensureNotificationPermission();
             }
           }}
+        />
+        <SectionHeader title={t('appUpdate.section')} />
+        <SwitchItem
+          icon="arrow-up-bold-circle-outline"
+          title={t('appUpdate.autoCheck')}
+          subtitle={t('appUpdate.autoCheckHint')}
+          value={checkApp}
+          onValueChange={(value) => setSetting('checkAppUpdates', value)}
         />
         <SectionHeader title={t('updates.excludedCategories')} />
         {categories.map((category) => (

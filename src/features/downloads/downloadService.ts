@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 
 import {
+  backgroundDelay,
   startDownloadService,
   stopDownloadService,
   updateDownloadService,
@@ -46,7 +47,7 @@ function getRunner(): DownloadRunner {
     getPlugin: getSource,
     delayMs: () => Math.max(0, getSetting('downloadDelayMs')),
     canDownload: () => isNetworkUsable(getSetting('downloadWifiOnly')),
-    wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    wait: (ms) => backgroundDelay(ms),
     now: () => Date.now(),
     onProgress: (progress) => {
       useDownloadState.setState({ progress });

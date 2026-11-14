@@ -1,5 +1,6 @@
 import { DEFAULT_READER_SETTINGS, type ReaderSettings } from '../reader/readerSettings';
 import { DEFAULT_USER_AGENT } from '../../plugins/libs/fetch';
+import type { AutoBackupFrequency } from '../backup/backupFile';
 import type { AccentSetting, AppThemeSetting } from '../../theme/palette';
 
 export type LanguageSetting = 'system' | 'fr' | 'en';
@@ -52,6 +53,17 @@ export interface AppSettings {
   updateCheckHours: number;
   updateWifiOnly: boolean;
   notifyNewChapters: boolean;
+
+  // App updates
+  /** Look for a new version of the app automatically (at most every six hours). */
+  checkAppUpdates: boolean;
+
+  // Backups
+  autoBackup: AutoBackupFrequency;
+  /** Folder chosen with the Android picker (content:// address); empty = none. */
+  autoBackupFolder: string;
+  /** Include downloaded chapters and translations in automatic backups. */
+  autoBackupChapters: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -85,6 +97,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   updateCheckHours: 12,
   updateWifiOnly: false,
   notifyNewChapters: true,
+
+  checkAppUpdates: true,
+
+  autoBackup: 'off',
+  autoBackupFolder: '',
+  autoBackupChapters: false,
 };
 
 export type SettingKey = keyof AppSettings;

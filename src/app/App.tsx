@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { checkAppUpdateAtLaunch } from '../features/appUpdate/appUpdateService';
+import { runAutoBackupIfDue } from '../features/backup/backupService';
 import { resumeDownloadsAtLaunch } from '../features/downloads/downloadService';
 import { ImportHost } from '../features/library/ImportHost';
 import { useOpenWithImport } from '../features/library/openWith';
@@ -22,12 +24,20 @@ function ThemedApp() {
   const theme = useTheme();
   useOpenWithImport();
 
-  // Work that continues from one launch to the next: downloads, new chapter checks.
+  // Work that continues from one launch to the next: downloads, new chapter checks,
+  // app updates and automatic backups.
   useEffect(() => {
     resumeDownloadsAtLaunch();
     checkAtLaunchIfDue();
     void syncBackgroundCheck();
-    return watchNotificationTaps();
+    checkAppUpdateAtLaunch();
+    // After the first screens are drawn: building the archive takes a moment.
+    const backupTimer = setTimeout(() => void runAutoBackupIfDue(), 4000);
+    const stopWatching = watchNotificationTaps();
+    return () => {
+      clearTimeout(backupTimer);
+      stopWatching();
+    };
   }, []);
 
   useEffect(() => {

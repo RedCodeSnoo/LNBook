@@ -49,6 +49,17 @@ export function invalidate(...keys: DataKey[]): void {
   });
 }
 
+/** Refreshes every screen (after a restore replaced the data underneath). */
+export function invalidateAll(): void {
+  useVersions.setState((state) => {
+    const next = { ...state };
+    for (const key of Object.keys(next) as DataKey[]) {
+      next[key] += 1;
+    }
+    return next;
+  });
+}
+
 /**
  * Runs a synchronous query again whenever its data keys or dependencies change.
  * Dependencies must be primitive values (ids, strings, booleans).

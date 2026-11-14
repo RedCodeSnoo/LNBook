@@ -1,0 +1,24 @@
+# Backup screen, and the app update found on GitHub: the development build is older than
+# any release, so the card appears; the download, the checksum and the data backup run
+# until Android asks to allow installations.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Backup and restore'
+- assertVisible: 'Create a backup'
+- assertVisible: 'Import an LNReader backup'
+- tapOn: 'Create a backup'
+- assertVisible: 'Downloaded chapters and imported books'
+- tapOn: 'Cancel'
+- tapOn: 'Back'
+- tapOn: 'About'
+- tapOn: 'Check for updates'
+- extendedWaitUntil:
+    visible: 'Version .* available'
+    timeout: 30000
+- tapOn: 'Download and install'
+- extendedWaitUntil:
+    visible: 'Allow the installation'
+    timeout: 240000
+- tapOn: 'Cancel'

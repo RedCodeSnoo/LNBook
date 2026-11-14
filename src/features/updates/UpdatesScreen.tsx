@@ -22,6 +22,7 @@ import {
 } from '../../theme/components';
 import { useTheme } from '../../theme/ThemeProvider';
 import { RADIUS, SPACING } from '../../theme/typography';
+import { AppUpdateCard } from '../appUpdate/AppUpdateCard';
 import { sourceErrorMessage } from '../browse/SourceBits';
 import { queueDownloads } from '../downloads/downloadService';
 import { PluginError } from '../../plugins/pluginErrors';
@@ -120,6 +121,7 @@ export function UpdatesScreen({ navigation }: TabScreenProps<'updates'>) {
 
   const header = (
     <View>
+      <AppUpdateCard />
       {checking ? (
         <View style={[styles.banner, { backgroundColor: colors.primaryContainer }]}>
           <AppText variant="label" color={colors.onPrimaryContainer} numberOfLines={1}>

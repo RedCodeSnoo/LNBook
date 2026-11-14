@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { BackupScreen } from '../features/backup/BackupScreen';
 import { CatalogScreen } from '../features/browse/CatalogScreen';
 import { GlobalSearchScreen } from '../features/browse/GlobalSearchScreen';
 import { PluginSettingsScreen } from '../features/browse/PluginSettingsScreen';
@@ -66,6 +67,7 @@ export function RootNavigator() {
       <Stack.Screen name="storage" component={StorageScreen} />
       <Stack.Screen name="settingsDownloads" component={DownloadSettingsScreen} />
       <Stack.Screen name="settingsUpdates" component={UpdateSettingsScreen} />
+      <Stack.Screen name="backup" component={BackupScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

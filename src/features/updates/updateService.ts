@@ -6,12 +6,14 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { create } from 'zustand';
 
+import { backgroundDelay } from '../../../modules/lnbook-system';
 import { getDb, openAppDatabase } from '../../db/client';
 import { invalidate } from '../../db/invalidation';
 import i18n, { initI18n } from '../../i18n';
 import { getSource } from '../../plugins/pluginHost';
 import { isNetworkUsable } from '../../services/network';
 import { notifyNewChapters } from '../../services/notifications';
+import { runAutoBackupIfDue } from '../backup/backupService';
 import { queueDownloads } from '../downloads/downloadService';
 import { readValue, writeValue } from '../settings/settingsRepository';
 import { getSetting, loadSettings, useSettingsStore } from '../settings/settingsStore';
@@ -58,7 +60,7 @@ export async function runUpdateCheck(options: { background?: boolean } = {}) {
       db: getDb(),
       getPlugin: getSource,
       delayMs: () => Math.max(0, getSetting('downloadDelayMs')),
-      wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      wait: (ms) => backgroundDelay(ms),
       now: () => Date.now(),
       onProgress: (done, total, title) =>
         useUpdateState.setState({ progress: { done, total, title } }),
@@ -105,6 +107,7 @@ TaskManager.defineTask(UPDATE_TASK, async () => {
       initI18n(loadSettings().language);
     }
     await runUpdateCheck({ background: true });
+    await runAutoBackupIfDue();
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {
     return BackgroundTask.BackgroundTaskResult.Failed;

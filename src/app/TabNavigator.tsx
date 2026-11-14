@@ -1,6 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useAppUpdate } from '../features/appUpdate/appUpdateService';
 import { BrowseScreen } from '../features/browse/BrowseScreen';
 import { HistoryScreen } from '../features/history/HistoryScreen';
 import { LibraryScreen } from '../features/library/LibraryScreen';
@@ -29,6 +31,8 @@ export function TabNavigator() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const scale = useUiScale();
+  // A dot on the tab tells that a new version of the app can be installed.
+  const appUpdate = useAppUpdate((state) => !!state.release && !state.ignored);
   const unreadUpdates = useQuery(() => countUnreadUpdates(getDb()), ['updates', 'chapters']);
 
   return (
@@ -46,7 +50,18 @@ export function TabNavigator() {
         },
         tabBarLabelStyle: { fontFamily: FONTS.medium, fontSize: 11 * scale },
         tabBarIcon: ({ focused, color }) => (
-          <Icon name={focused ? ICONS[route.name].active : ICONS[route.name].idle} color={color} />
+          <View>
+            <Icon
+              name={focused ? ICONS[route.name].active : ICONS[route.name].idle}
+              color={color}
+            />
+            {route.name === 'updates' && appUpdate ? (
+              <View
+                testID="app-update-dot"
+                style={[styles.dot, { backgroundColor: colors.error, borderColor: colors.surface }]}
+              />
+            ) : null}
+          </View>
         ),
       })}
     >
@@ -67,3 +82,15 @@ export function TabNavigator() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  dot: {
+    position: 'absolute',
+    top: -2,
+    left: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+  },
+});

@@ -48,7 +48,7 @@ export function MoreScreen({ navigation }: TabScreenProps<'more'>) {
         <ListItem
           icon="backup-restore"
           title={t('more.backup')}
-          onPress={soon('more.backup', 'backup-restore')}
+          onPress={() => navigation.navigate('backup')}
         />
         <ListItem
           icon="information-outline"

@@ -2,6 +2,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
   <application>
     <!-- Keeps the download queue running with the screen off. -->
@@ -9,5 +10,16 @@
       android:name="expo.modules.lnbooksystem.DownloadService"
       android:exported="false"
       android:foregroundServiceType="dataSync" />
+
+    <!-- Gives the Android installer access to a downloaded update. -->
+    <provider
+      android:name="expo.modules.lnbooksystem.UpdateFileProvider"
+      android:authorities="${applicationId}.lnbookfiles"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/lnbook_file_paths" />
+    </provider>
   </application>
 </manifest>

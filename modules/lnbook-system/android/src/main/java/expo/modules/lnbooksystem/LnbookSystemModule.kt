@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
@@ -23,7 +26,7 @@ class LnbookSystemModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("LnbookSystem")
 
-    Events("onVolumeKey", "onIncomingFiles")
+    Events("onVolumeKey", "onIncomingFiles", "onUpdateDownloadProgress")
 
     OnCreate {
       SystemState.onVolumeKey = { direction -> sendEvent("onVolumeKey", mapOf("direction" to direction)) }
@@ -68,6 +71,34 @@ class LnbookSystemModule : Module() {
     Function("isMusicActive") {
       val audio = appContext.reactContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
       audio?.isMusicActive == true
+    }
+
+    // Timer that keeps working while the app is in the background (screen off): the
+    // JavaScript timers are suspended there, native callbacks are not.
+    AsyncFunction("delay") { ms: Double, promise: Promise ->
+      Handler(Looper.getMainLooper()).postDelayed({ promise.resolve(null) }, ms.toLong().coerceAtLeast(0))
+    }
+
+    // App update: download with progress and checksum, then the Android installer.
+    AsyncFunction("downloadUpdate") { url: String, name: String ->
+      val context = appContext.reactContext ?: throw IllegalStateException("No context")
+      AppUpdate.download(context, url, name) { received, total ->
+        sendEvent("onUpdateDownloadProgress", mapOf("received" to received.toDouble(), "total" to total.toDouble()))
+      }
+    }
+
+    Function("canInstallUpdates") {
+      appContext.reactContext?.let { AppUpdate.canInstall(it) } ?: false
+    }
+
+    Function("openInstallSettings") {
+      appContext.reactContext?.let { AppUpdate.openInstallSettings(it) }
+      Unit
+    }
+
+    Function("installUpdate") { path: String ->
+      val context = appContext.reactContext ?: throw IllegalStateException("No context")
+      AppUpdate.install(context, path)
     }
 
     // Runs off the JavaScript thread: each file is copied into the cache of the app while
