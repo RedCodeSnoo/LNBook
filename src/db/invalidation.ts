@@ -17,6 +17,8 @@ export type DataKey =
   | 'updates'
   | 'stats'
   | 'replacements'
+  /** Text of chapters as displayed: edits and replacement rules. */
+  | 'chapterContent'
   | 'glossary';
 
 type Versions = Record<DataKey, number>;
@@ -33,6 +35,7 @@ const useVersions = create<Versions>(() => ({
   updates: 0,
   stats: 0,
   replacements: 0,
+  chapterContent: 0,
   glossary: 0,
 }));
 
@@ -59,4 +62,9 @@ export function useQuery<T>(
   const depsKey = deps.map((dep) => `${typeof dep}:${String(dep)}`).join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => query(), [stamp, depsKey]);
+}
+
+/** Changes every time one of the keys is invalidated (to redo work that is not a query). */
+export function useDataVersion(...keys: DataKey[]): string {
+  return useVersions((state) => keys.map((key) => state[key]).join('.'));
 }

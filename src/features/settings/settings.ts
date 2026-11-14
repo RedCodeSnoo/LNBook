@@ -1,3 +1,4 @@
+import { DEFAULT_READER_SETTINGS, type ReaderSettings } from '../reader/readerSettings';
 import type { AccentSetting, AppThemeSetting } from '../../theme/palette';
 
 export type LanguageSetting = 'system' | 'fr' | 'en';
@@ -30,6 +31,9 @@ export interface AppSettings {
   // Import
   /** Keep the styles of imported EPUB files instead of the reader themes. */
   keepEpubFormatting: boolean;
+
+  /** Global reader display settings (a novel can override them). */
+  reader: ReaderSettings;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -51,6 +55,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showProgressBar: true,
 
   keepEpubFormatting: false,
+
+  reader: DEFAULT_READER_SETTINGS,
 };
 
 export type SettingKey = keyof AppSettings;

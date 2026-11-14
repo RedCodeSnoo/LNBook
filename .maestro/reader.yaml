@@ -1,0 +1,38 @@
+# Runs after import.yaml: reads the first chapter, leaves, and comes back to the same place.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: '.*Sample Saga.*'
+- tapOn: 'Start'
+- extendedWaitUntil:
+    visible: '.*Prologue paragraph 1\..*'
+    timeout: 30000
+# A tap in the middle shows the bars.
+- tapOn:
+    point: '50%,50%'
+- assertVisible: 'Position in the chapter'
+- assertVisible: 'Reading settings'
+- tapOn: 'Reading settings'
+- assertVisible: 'Page theme'
+- tapOn: 'Sepia'
+- back
+- tapOn:
+    point: '50%,40%'
+- assertNotVisible: 'Position in the chapter'
+# Scroll, leave, and come back: the reader opens further than the beginning.
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- back
+- assertVisible: 'Continue: Prologue'
+- tapOn: 'Continue: Prologue'
+- extendedWaitUntil:
+    visible: '.*Prologue paragraph.*'
+    timeout: 30000
+- tapOn:
+    point: '50%,50%'
+- assertVisible: 'Position in the chapter'
+- assertNotVisible: '0 %'

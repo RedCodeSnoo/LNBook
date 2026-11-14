@@ -17,3 +17,4 @@ export { Menu, type MenuItem } from './Menu';
 export { TextField } from './TextField';
 export { hideToast, showToast, ToastHost } from './Toast';
 export { Cover, coverUri } from './Cover';
+export { Stepper } from './Stepper';

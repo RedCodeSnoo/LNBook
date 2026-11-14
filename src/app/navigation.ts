@@ -21,6 +21,10 @@ export type RootStackParamList = {
   /** Single entry point to read a chapter, optionally at a precise place. */
   reader: { chapterId: number; anchor?: string };
   categories: undefined;
+  chapterEdit: { chapterId: number };
+  /** Text replacement rules: global ones, plus those of a novel when given. */
+  replacements: { novelId?: number; chapterId?: number };
+  settingsReader: undefined;
   settingsLibrary: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };
