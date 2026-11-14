@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not of the form vX.Y.Z"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests
+        run: npm test -- --ci
+
+      - name: Build APK
+        id: apk
+        uses: ./.github/actions/build-apk
+        with:
+          version: ${{ steps.version.outputs.version }}
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Prepare release files
+        id: files
+        env:
+          APK_PATH: ${{ steps.apk.outputs.apk-path }}
+        run: |
+          mkdir -p release
+          APK_NAME="LNBook-${GITHUB_REF_NAME}.apk"
+          cp "$APK_PATH" "release/$APK_NAME"
+          (cd release && sha256sum "$APK_NAME" > "$APK_NAME.sha256")
+          cat "release/$APK_NAME.sha256"
+
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "$PREVIOUS_TAG" ]; then RANGE="${PREVIOUS_TAG}..${GITHUB_REF_NAME}"; else RANGE="$GITHUB_REF_NAME"; fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty='- %s' "$RANGE" | grep -Ev '^- (chore|ci|test|docs|style)(\(.+\))?:' || echo "- Maintenance release"
+          } > release/CHANGELOG.txt
+          cat release/CHANGELOG.txt
+          echo "apk-name=$APK_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK_NAME: ${{ steps.files.outputs.apk-name }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "release/$APK_NAME" "release/$APK_NAME.sha256" \
+            --title "LNBook $GITHUB_REF_NAME" \
+            --notes-file release/CHANGELOG.txt

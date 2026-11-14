@@ -1,0 +1,83 @@
+name: Build signed APK
+description: Generates the Android project with expo prebuild and builds a signed release APK.
+
+inputs:
+  version:
+    description: App version (X.Y.Z). Empty for a development build.
+    required: false
+    default: ''
+  keystore-base64:
+    description: Release keystore, base64 encoded.
+    required: false
+    default: ''
+  keystore-password:
+    required: false
+    default: ''
+  key-alias:
+    required: false
+    default: ''
+  key-password:
+    required: false
+    default: ''
+
+outputs:
+  apk-path:
+    description: Path of the built APK.
+    value: ${{ steps.locate.outputs.apk-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate Android project
+      shell: bash
+      env:
+        APP_VERSION: ${{ inputs.version }}
+      run: |
+        if [ -z "$APP_VERSION" ]; then unset APP_VERSION; fi
+        npx expo prebuild --platform android --clean --no-install
+
+    - name: Restore keystore
+      id: keystore
+      shell: bash
+      env:
+        KEYSTORE_BASE64: ${{ inputs.keystore-base64 }}
+      run: |
+        if [ -n "$KEYSTORE_BASE64" ]; then
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::No release keystore available, the APK is signed with the debug key."
+          echo "path=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Build release APK
+      shell: bash
+      working-directory: android
+      env:
+        ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+        ANDROID_KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        ANDROID_KEY_ALIAS: ${{ inputs.key-alias }}
+        ANDROID_KEY_PASSWORD: ${{ inputs.key-password }}
+        NODE_ENV: production
+      run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+    - name: Remove keystore
+      if: always()
+      shell: bash
+      run: rm -f "$RUNNER_TEMP/release.jks"
+
+    - name: Locate and verify APK
+      id: locate
+      shell: bash
+      env:
+        EXPECT_RELEASE_KEY: ${{ steps.keystore.outputs.path != '' }}
+      run: |
+        APK=android/app/build/outputs/apk/release/app-release.apk
+        test -f "$APK"
+        APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+        "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+        if [ "$EXPECT_RELEASE_KEY" = "true" ] && grep -q "CN=Android Debug" "$RUNNER_TEMP/certs.txt"; then
+          echo "::error::The APK is signed with the debug key instead of the release key."
+          exit 1
+        fi
+        echo "apk-path=$APK" >> "$GITHUB_OUTPUT"
