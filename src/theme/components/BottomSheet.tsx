@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../ThemeProvider';
 import { RADIUS, SPACING } from '../typography';
 import { AppText } from './AppText';
 
-/** Panel sliding from the bottom. Back button and a tap outside close it. */
+/**
+ * Panel sliding from the bottom. Back button and a tap outside close it.
+ * The panel moves up with the keyboard, so that its fields and buttons stay reachable.
+ */
 export function BottomSheet({
   visible,
   title,
@@ -30,7 +33,7 @@ export function BottomSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.flex}>
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <Pressable
           style={[styles.backdrop, { backgroundColor: colors.overlay }]}
           onPress={onClose}
@@ -56,7 +59,7 @@ export function BottomSheet({
             children
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

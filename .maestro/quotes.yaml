@@ -15,7 +15,8 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Folders'
 - tapOn: 'New folder'
 - inputText: 'Tragic'
-- tapOn: 'Add a folder'
+- pressKey: Enter
+- assertVisible: 'Tragic'
 - tapOn: 'Save'
 - back
 - tapOn: 'Quotes'
