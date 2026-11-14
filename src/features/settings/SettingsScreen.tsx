@@ -7,7 +7,12 @@ import { AppBar, ListItem, Screen, type IconName } from '../../theme/components'
 interface Group {
   key: string;
   icon: IconName;
-  route?: 'settingsGeneral' | 'settingsAppearance' | 'settingsLibrary' | 'settingsReader';
+  route?:
+    | 'settingsGeneral'
+    | 'settingsAppearance'
+    | 'settingsLibrary'
+    | 'settingsReader'
+    | 'settingsSources';
 }
 
 const GROUPS: Group[] = [
@@ -19,7 +24,7 @@ const GROUPS: Group[] = [
   { key: 'translation', icon: 'translate' },
   { key: 'downloads', icon: 'download-outline' },
   { key: 'updates', icon: 'bell-outline' },
-  { key: 'sources', icon: 'puzzle-outline' },
+  { key: 'sources', icon: 'puzzle-outline', route: 'settingsSources' },
   { key: 'advanced', icon: 'wrench-outline' },
 ];
 

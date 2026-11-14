@@ -1,0 +1,45 @@
+# Installs a real source from the catalogue and opens it. What depends on the site itself
+# (results, novel, chapter) is optional: a site can be down or refuse the test machine.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'Browse'
+- assertVisible: 'No source installed'
+- tapOn: 'Open the catalogue'
+- extendedWaitUntil:
+    visible: 'Search a source'
+    timeout: 60000
+- tapOn: 'Search a source'
+- inputText: 'NovelFrance'
+- extendedWaitUntil:
+    visible: 'NovelFrance'
+    timeout: 20000
+- tapOn: 'Install'
+- extendedWaitUntil:
+    visible: 'Uninstall NovelFrance'
+    timeout: 60000
+- tapOn: 'Back'
+- assertVisible: 'NovelFrance'
+- tapOn: 'NovelFrance'
+- assertVisible: 'Popular'
+- assertVisible: 'Latest releases'
+- extendedWaitUntil:
+    visible:
+      id: 'source-result'
+    timeout: 45000
+    optional: true
+- tapOn:
+    id: 'source-result'
+    index: 0
+    optional: true
+- extendedWaitUntil:
+    visible: 'Start'
+    timeout: 45000
+    optional: true
+- tapOn:
+    text: 'Start'
+    optional: true
+- extendedWaitUntil:
+    visible: '[0-9]+ %'
+    timeout: 45000
+    optional: true

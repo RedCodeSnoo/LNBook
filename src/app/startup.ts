@@ -3,6 +3,8 @@ import { seedDefaultCategories } from '../features/library/libraryRepository';
 import { readValue, writeValue } from '../features/settings/settingsRepository';
 import { loadSettings } from '../features/settings/settingsStore';
 import i18n, { initI18n } from '../i18n';
+import { removeVisitedNovels } from '../features/browse/sourceNovels';
+import { seedDefaultRepository } from '../plugins/pluginManager';
 
 /** Creates the default shelves on the very first launch only. */
 function seedDefaults(): void {
@@ -27,6 +29,9 @@ export function startApp(): StartupResult {
     const settings = loadSettings();
     initI18n(settings.language);
     seedDefaults();
+    seedDefaultRepository(getDb());
+    // Novels only looked at while browsing are not kept from one launch to the next.
+    removeVisitedNovels(getDb());
     return { ok: true };
   } catch (error) {
     initI18n('system');

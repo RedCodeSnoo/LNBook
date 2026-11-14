@@ -8,6 +8,7 @@ const ESM_PACKAGES = [
   'dom-serializer',
   'domelementtype',
   'entities',
+  '@noble/ciphers',
 ];
 
 module.exports = {

@@ -1,5 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { CatalogScreen } from '../features/browse/CatalogScreen';
+import { GlobalSearchScreen } from '../features/browse/GlobalSearchScreen';
+import { PluginSettingsScreen } from '../features/browse/PluginSettingsScreen';
+import { SourceScreen } from '../features/browse/SourceScreen';
+import { WebViewScreen } from '../features/browse/WebViewScreen';
 import { CategoriesScreen } from '../features/library/CategoriesScreen';
 import { AboutScreen } from '../features/more/AboutScreen';
 import { NovelEditScreen } from '../features/novel/NovelEditScreen';
@@ -12,6 +17,7 @@ import { AppearanceSettingsScreen } from '../features/settings/AppearanceSetting
 import { GeneralSettingsScreen } from '../features/settings/GeneralSettingsScreen';
 import { LibrarySettingsScreen } from '../features/settings/LibrarySettingsScreen';
 import { ReaderSettingsScreen } from '../features/settings/ReaderSettingsScreen';
+import { SourcesSettingsScreen } from '../features/settings/SourcesSettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
@@ -46,6 +52,12 @@ export function RootNavigator() {
       <Stack.Screen name="replacements" component={ReplacementsScreen} />
       <Stack.Screen name="settingsReader" component={ReaderSettingsScreen} />
       <Stack.Screen name="quoteFolders" component={QuoteFoldersScreen} />
+      <Stack.Screen name="catalog" component={CatalogScreen} />
+      <Stack.Screen name="source" component={SourceScreen} />
+      <Stack.Screen name="globalSearch" component={GlobalSearchScreen} />
+      <Stack.Screen name="webview" component={WebViewScreen} />
+      <Stack.Screen name="pluginSettings" component={PluginSettingsScreen} />
+      <Stack.Screen name="settingsSources" component={SourcesSettingsScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

@@ -26,6 +26,13 @@ export type RootStackParamList = {
   replacements: { novelId?: number; chapterId?: number };
   settingsReader: undefined;
   quoteFolders: undefined;
+  catalog: undefined;
+  source: { pluginId: string; search?: string };
+  globalSearch: { term?: string };
+  /** Web view of a site, sharing its cookies with the plugin of the source. */
+  webview: { url: string; pluginId?: string; title?: string };
+  pluginSettings: { pluginId: string };
+  settingsSources: undefined;
   settingsLibrary: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };

@@ -1,4 +1,5 @@
 import { DEFAULT_READER_SETTINGS, type ReaderSettings } from '../reader/readerSettings';
+import { DEFAULT_USER_AGENT } from '../../plugins/libs/fetch';
 import type { AccentSetting, AppThemeSetting } from '../../theme/palette';
 
 export type LanguageSetting = 'system' | 'fr' | 'en';
@@ -34,6 +35,12 @@ export interface AppSettings {
 
   /** Global reader display settings (a novel can override them). */
   reader: ReaderSettings;
+
+  // Sources
+  /** Languages shown in the plugin catalogue, as named by the plugins. */
+  sourceLanguages: string[];
+  /** User-Agent sent to the sites, by plugins and by the web view. */
+  userAgent: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -57,6 +64,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   keepEpubFormatting: false,
 
   reader: DEFAULT_READER_SETTINGS,
+
+  sourceLanguages: ['Français', 'English'],
+  userAgent: DEFAULT_USER_AGENT,
 };
 
 export type SettingKey = keyof AppSettings;

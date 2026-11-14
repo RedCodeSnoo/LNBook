@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Linking, Share, StyleSheet, TextInput, View } from 'react-native';
+import { AppState, Linking, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -25,6 +25,7 @@ import {
   IconButton,
   Menu,
   Screen,
+  Skeleton,
   showToast,
 } from '../../theme/components';
 import { relativeLuminance } from '../../theme/contrast';
@@ -35,6 +36,8 @@ import { QuoteEditorSheet, type QuoteDraft } from '../quotes/QuoteEditorSheet';
 import { listChapterQuoteAnchors, listQuotes } from '../quotes/quotesRepository';
 import { useSetting } from '../settings/settingsStore';
 import { useReadingSession } from '../stats/useReadingSession';
+import { SourceErrorView } from '../browse/SourceBits';
+import { preloadChapter, sourcePageUrl, useChapterFetch } from '../browse/useSourceNovel';
 import { BookSearchSheet } from './BookSearchSheet';
 import { ChapterDrawer } from './ChapterDrawer';
 import {
@@ -228,6 +231,21 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
         }
       : null,
   );
+
+  // ------------------------------------------------------------------ online text
+
+  // An online chapter that is not on the phone is fetched when it is opened.
+  const online = useChapterFetch(novel, chapter, !hasText);
+  const nextChapter = context?.next ?? null;
+  useEffect(() => {
+    if (!hasText || !novel || !nextChapter) {
+      return undefined;
+    }
+    // The next chapter is fetched in advance, once the current one has settled.
+    const timer = setTimeout(() => preloadChapter(novel, nextChapter), 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasText, novel?.id, nextChapter?.id]);
 
   // ------------------------------------------------------------------ leaving
 
@@ -582,13 +600,36 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           containerStyle={{ backgroundColor: pageTheme.background }}
         />
       ) : (
-        <View style={[styles.web, { paddingTop: safeInsets.top + 56 }]}>
-          <EmptyState
-            icon="cloud-off-outline"
-            title={t('reader.notDownloadedTitle')}
-            message={t('reader.notDownloadedMessage')}
-          />
-        </View>
+        <Pressable
+          accessibilityLabel={t('reader.toggleBars')}
+          onPress={() => setBarsVisible((visible) => !visible)}
+          style={[
+            styles.web,
+            { paddingTop: safeInsets.top + 56, backgroundColor: appTheme.colors.background },
+          ]}
+        >
+          {online.error ? (
+            <SourceErrorView
+              error={online.error}
+              onRetry={online.retry}
+              webUrl={sourcePageUrl(novel, chapter) ?? undefined}
+              pluginId={novel.pluginId ?? undefined}
+            />
+          ) : online.fetching ? (
+            <View style={styles.loading} accessibilityLabel={t('reader.loadingChapter')}>
+              <Skeleton height={28} width="70%" />
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((line) => (
+                <Skeleton key={line} height={14} width={line % 3 === 2 ? '60%' : '100%'} />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              icon="cloud-off-outline"
+              title={t('reader.notDownloadedTitle')}
+              message={t('reader.notDownloadedMessage')}
+            />
+          )}
+        </Pressable>
       )}
 
       {settings.warmth > 0 ? (
@@ -714,6 +755,24 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
                           setPanel('bookSearch');
                         },
                       },
+                      ...(novel.origin === 'online'
+                        ? [
+                            {
+                              label: t('sources.openWebView'),
+                              icon: 'web' as const,
+                              onPress: () => {
+                                const url = sourcePageUrl(novel, chapter);
+                                if (url) {
+                                  navigation.navigate('webview', {
+                                    url,
+                                    pluginId: novel.pluginId ?? undefined,
+                                    title: chapter.title,
+                                  });
+                                }
+                              },
+                            },
+                          ]
+                        : []),
                       {
                         label: t('reader.editChapter'),
                         icon: 'pencil-outline',
@@ -865,6 +924,7 @@ function BatteryText({ color }: { color: string }) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   web: { flex: 1 },
+  loading: { padding: SPACING.xl, gap: SPACING.md },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   footer: {
     position: 'absolute',

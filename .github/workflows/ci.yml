@@ -46,6 +46,11 @@ jobs:
       - name: Tests
         run: npm test -- --ci
 
+      # Real plugins against the real sites: informative only, a site can be down.
+      - name: Live source tests
+        continue-on-error: true
+        run: npm run test:live
+
       - name: Build APK
         id: apk
         uses: ./.github/actions/build-apk
@@ -122,6 +127,7 @@ jobs:
             scripts/ci-maestro.sh .maestro/import.yaml
             scripts/ci-maestro.sh .maestro/reader.yaml
             scripts/ci-maestro.sh .maestro/quotes.yaml
+            scripts/ci-maestro.sh .maestro/browse.yaml
 
       - uses: actions/upload-artifact@v7
         if: failure()

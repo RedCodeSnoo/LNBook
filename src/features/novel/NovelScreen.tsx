@@ -1,7 +1,7 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Share, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
@@ -23,11 +23,15 @@ import {
   Menu,
   Screen,
   SegmentedTabs,
+  Skeleton,
   TextField,
   showToast,
 } from '../../theme/components';
 import { useTheme } from '../../theme/ThemeProvider';
 import { SPACING } from '../../theme/typography';
+import { SourceErrorView } from '../browse/SourceBits';
+import { setNovelInLibrary } from '../browse/sourceNovels';
+import { sourcePageUrl, useSourceNovel } from '../browse/useSourceNovel';
 import { QuoteList } from '../quotes/QuoteList';
 import { resetNovelProgress } from '../stats/sessionsRepository';
 import { CategoryPickerDialog } from '../library/CategoryPickerDialog';
@@ -109,6 +113,8 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
     () => findResumeChapter(chapters, novel?.lastReadChapterId ?? null),
     [chapters, novel?.lastReadChapterId],
   );
+
+  const source = useSourceNovel(novel, chapters.length);
 
   const selectionMode = selection.length > 0;
   const clearSelection = useCallback(() => setSelection([]), []);
@@ -209,7 +215,15 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
       icon: novel.inLibrary ? 'heart' : 'heart-outline',
       label: novel.inLibrary ? t('novel.inLibrary') : t('novel.addToLibrary'),
       active: novel.inLibrary,
-      onPress: () => setPrompt({ kind: 'remove' }),
+      onPress: () => {
+        if (novel.inLibrary) {
+          setPrompt({ kind: 'remove' });
+        } else {
+          setNovelInLibrary(getDb(), novelId, true);
+          invalidate('library', 'novel');
+          showToast(t('novel.addedToLibrary'));
+        }
+      },
     },
     {
       key: 'categories',
@@ -295,6 +309,22 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         )
       ) : null}
       {tab === 'quotes' ? <QuoteList novelId={novelId} /> : null}
+      {tab === 'chapters' && source.error ? (
+        <SourceErrorView
+          compact
+          error={source.error}
+          onRetry={() => void source.refresh()}
+          webUrl={sourcePageUrl(novel) ?? undefined}
+          pluginId={novel.pluginId ?? undefined}
+        />
+      ) : null}
+      {tab === 'chapters' && source.refreshing && chapters.length === 0 ? (
+        <View style={styles.loading} accessibilityLabel={t('novel.loadingChapters')}>
+          {[0, 1, 2, 3, 4].map((line) => (
+            <Skeleton key={line} height={40} />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 
@@ -305,7 +335,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         title={t('novel.noFavoritesTitle')}
         message={t('novel.noFavoritesMessage')}
       />
-    ) : (
+    ) : source.refreshing || source.error ? null : (
       <EmptyState icon="book-open-blank-variant" title={t('novel.noChaptersTitle')} />
     );
 
@@ -340,6 +370,45 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                   icon: 'pencil-outline',
                   onPress: () => navigation.navigate('novelEdit', { novelId }),
                 },
+                ...(source.online
+                  ? [
+                      {
+                        label: t('novel.refresh'),
+                        icon: 'refresh' as const,
+                        disabled: source.refreshing,
+                        onPress: () =>
+                          void source.refresh().then((added) => {
+                            if (added !== null) {
+                              showToast(t('novel.refreshed', { count: added }));
+                            }
+                          }),
+                      },
+                      {
+                        label: t('sources.openWebView'),
+                        icon: 'web' as const,
+                        onPress: () => {
+                          const url = sourcePageUrl(novel);
+                          if (url) {
+                            navigation.navigate('webview', {
+                              url,
+                              pluginId: novel.pluginId ?? undefined,
+                              title: novel.title,
+                            });
+                          }
+                        },
+                      },
+                      {
+                        label: t('novel.shareLink'),
+                        icon: 'share-variant-outline' as const,
+                        onPress: () => {
+                          const url = sourcePageUrl(novel);
+                          if (url) {
+                            void Share.share({ message: url }).catch(() => undefined);
+                          }
+                        },
+                      },
+                    ]
+                  : []),
                 {
                   label: t('reader.replacements'),
                   icon: 'find-replace',
@@ -631,6 +700,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
 
 const styles = StyleSheet.create({
   list: { paddingBottom: SPACING.xxl },
+  loading: { padding: SPACING.lg, gap: SPACING.sm },
   dialogCheck: { marginHorizontal: -SPACING.lg },
   toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.sm },
   count: { flex: 1, paddingLeft: SPACING.sm },
