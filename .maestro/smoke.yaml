@@ -6,7 +6,11 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Library'
 - assertVisible: 'Your library is empty|No online novel'
 - tapOn: 'Updates'
-- assertVisible: 'No new chapter'
+# A newer release than this development build may be announced above the list.
+- scrollUntilVisible:
+    element: 'No new chapter'
+    direction: DOWN
+    timeout: 15000
 - tapOn: 'History'
 - assertVisible: 'Nothing in your history'
 - tapOn: 'Browse'

@@ -1,6 +1,9 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["expo.modules.lnbooksystem.LnbookSystemModule"]
+    "modules": [
+      "expo.modules.lnbooksystem.LnbookSystemModule",
+      "expo.modules.lnbooksystem.LnbookTtsModule"
+    ]
   }
 }

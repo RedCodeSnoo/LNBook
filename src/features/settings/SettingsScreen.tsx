@@ -14,7 +14,8 @@ interface Group {
     | 'settingsReader'
     | 'settingsSources'
     | 'settingsDownloads'
-    | 'settingsUpdates';
+    | 'settingsUpdates'
+    | 'settingsVoice';
 }
 
 const GROUPS: Group[] = [
@@ -22,7 +23,7 @@ const GROUPS: Group[] = [
   { key: 'appearance', icon: 'palette-outline', route: 'settingsAppearance' },
   { key: 'library', icon: 'bookshelf', route: 'settingsLibrary' },
   { key: 'reader', icon: 'book-open-page-variant-outline', route: 'settingsReader' },
-  { key: 'voice', icon: 'account-voice' },
+  { key: 'voice', icon: 'account-voice', route: 'settingsVoice' },
   { key: 'translation', icon: 'translate' },
   { key: 'downloads', icon: 'download-outline', route: 'settingsDownloads' },
   { key: 'updates', icon: 'bell-outline', route: 'settingsUpdates' },

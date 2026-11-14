@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import i18n from '../../i18n';
@@ -52,6 +52,8 @@ export function AppUpdateCard() {
   const { colors } = useTheme();
   const dateFormat = useSetting('dateFormat');
   const { release, ignored, phase, received, total, failure } = useAppUpdate();
+  // The changelog is folded: the card must not hide the new chapters below it.
+  const [showNotes, setShowNotes] = useState(false);
 
   // Back from the Android settings with the permission given: the installation continues.
   useEffect(() => {
@@ -95,7 +97,27 @@ export function AppUpdateCard() {
         </View>
       </View>
 
-      {release.notes ? <ReleaseNotes notes={release.notes} /> : null}
+      {release.notes ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showNotes }}
+            onPress={() => setShowNotes((value) => !value)}
+            android_ripple={{ color: colors.ripple }}
+            style={styles.notesToggle}
+          >
+            <AppText variant="label" color={colors.primary}>
+              {showNotes ? t('appUpdate.hideChanges') : t('appUpdate.showChanges')}
+            </AppText>
+            <Icon
+              name={showNotes ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={colors.primary}
+            />
+          </Pressable>
+          {showNotes ? <ReleaseNotes notes={release.notes} /> : null}
+        </>
+      ) : null}
 
       {busy ? (
         <View style={styles.progress}>
@@ -138,7 +160,7 @@ export function AppUpdateCard() {
       ) : null}
 
       <View style={styles.actions}>
-        {release.pageUrl ? (
+        {release.pageUrl && showNotes ? (
           <Button
             label={t('appUpdate.openPage')}
             variant="text"
@@ -184,10 +206,16 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderRadius: RADIUS.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   notes: { gap: SPACING.xs },
+  notesToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    alignSelf: 'flex-start',
+  },
   bullet: { flexDirection: 'row', gap: SPACING.sm },
   progress: { gap: SPACING.xs },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },

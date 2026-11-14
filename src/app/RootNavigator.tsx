@@ -24,6 +24,7 @@ import { SourcesSettingsScreen } from '../features/settings/SourcesSettingsScree
 import { DownloadSettingsScreen } from '../features/settings/DownloadSettingsScreen';
 import { UpdateSettingsScreen } from '../features/settings/UpdateSettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { VoiceSettingsScreen } from '../features/tts/VoiceSettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
 import type { RootStackParamList } from './navigation';
@@ -68,6 +69,7 @@ export function RootNavigator() {
       <Stack.Screen name="settingsDownloads" component={DownloadSettingsScreen} />
       <Stack.Screen name="settingsUpdates" component={UpdateSettingsScreen} />
       <Stack.Screen name="backup" component={BackupScreen} />
+      <Stack.Screen name="settingsVoice" component={VoiceSettingsScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

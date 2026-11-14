@@ -54,6 +54,20 @@ export interface AppSettings {
   updateWifiOnly: boolean;
   notifyNewChapters: boolean;
 
+  // Voice
+  /** Speech engine (Android package name); empty = the default engine of the phone. */
+  ttsEngine: string;
+  /** Voice remembered for each language code. */
+  ttsVoices: Record<string, string>;
+  /** Speed, 0.5 to 3. */
+  ttsRate: number;
+  /** Tone, 0.5 to 2. */
+  ttsPitch: number;
+  /** Silence between two paragraphs, in milliseconds. */
+  ttsPauseMs: number;
+  /** Go on with the next chapter when one is finished. */
+  ttsAutoNext: boolean;
+
   // App updates
   /** Look for a new version of the app automatically (at most every six hours). */
   checkAppUpdates: boolean;
@@ -97,6 +111,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   updateCheckHours: 12,
   updateWifiOnly: false,
   notifyNewChapters: true,
+
+  ttsEngine: '',
+  ttsVoices: {},
+  ttsRate: 1,
+  ttsPitch: 1,
+  ttsPauseMs: 350,
+  ttsAutoNext: true,
 
   checkAppUpdates: true,
 

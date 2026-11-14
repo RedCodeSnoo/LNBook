@@ -65,6 +65,16 @@ function parse(html: string) {
   return { document, blocks };
 }
 
+/** Parsed chapter with its block elements, for code that rewrites the blocks. */
+export function parseChapterBlocks(html: string) {
+  return parse(html);
+}
+
+/** HTML of a parsed chapter (or of some of its nodes). */
+export function serializeNodes(nodes: AnyNode[]): string {
+  return render(nodes, { encodeEntities: 'utf8', selfClosingTags: true, emptyAttrs: true });
+}
+
 /** Text of every block of a chapter, in order. */
 export function extractBlockTexts(html: string): string[] {
   return parse(html).blocks.map(textOf);

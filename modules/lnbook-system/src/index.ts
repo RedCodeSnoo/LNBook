@@ -119,3 +119,11 @@ export function installUpdate(path: string): void {
 export function backgroundDelay(ms: number): Promise<void> {
   return native.delay(ms);
 }
+
+export {
+  nativeTts,
+  type TtsEngineInfo,
+  type TtsLoadOptions,
+  type TtsPlaybackState,
+  type TtsVoice,
+} from './tts';

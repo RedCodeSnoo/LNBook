@@ -1,0 +1,30 @@
+# Reading aloud: the voice settings open, and the voice starts in the reader with its
+# controls (the emulator image has a speech engine, but no sound output).
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Settings'
+- tapOn: 'Voice'
+- assertVisible: 'Speed'
+- assertVisible: 'Install more voices'
+- tapOn: 'Back'
+- tapOn: 'Back'
+- tapOn: 'Library'
+- tapOn: 'Sample Saga, Ada Author.*'
+- tapOn: 'Continue.*|Start'
+- extendedWaitUntil:
+    visible: '[0-9]+ %'
+    timeout: 30000
+- tapOn:
+    point: '50%,50%'
+- tapOn: 'Read aloud'
+- extendedWaitUntil:
+    visible: 'Next sentence'
+    timeout: 30000
+- assertVisible: 'Sleep timer'
+- tapOn: 'Sleep timer'
+- tapOn: 'End of the chapter'
+- tapOn: 'Next paragraph'
+- tapOn: 'Stop the voice'
+- assertNotVisible: 'Next sentence'

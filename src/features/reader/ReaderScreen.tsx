@@ -36,6 +36,8 @@ import { QuoteEditorSheet, type QuoteDraft } from '../quotes/QuoteEditorSheet';
 import { listChapterQuoteAnchors, listQuotes } from '../quotes/quotesRepository';
 import { useSetting } from '../settings/settingsStore';
 import { useReadingSession } from '../stats/useReadingSession';
+import { TtsBar } from '../tts/TtsBar';
+import { readAloudFromPlace, startReadingAloud, stopReadingAloud, useTts } from '../tts/ttsService';
 import { SourceErrorView } from '../browse/SourceBits';
 import { preloadChapter, sourcePageUrl, useChapterFetch } from '../browse/useSourceNovel';
 import { BookSearchSheet } from './BookSearchSheet';
@@ -107,6 +109,8 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   const [quoteDraft, setQuoteDraft] = useState<QuoteDraft | null>(null);
   const [quoteId, setQuoteId] = useState<number | null>(null);
   const incognito = useSetting('incognito');
+  /** Number of chapters that finished loading in the page. */
+  const [readyCount, setReadyCount] = useState(0);
 
   // Language displayed (null = original): quotes belong to one version of the text.
   const lang = novel?.readingLang ?? null;
@@ -219,8 +223,16 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   // ------------------------------------------------------------------ reading time
 
   const hasText = document !== null;
+  // While the voice reads, the time is counted as listening by the voice itself.
+  const ttsStatus = useTts((state) => state.status);
+  const ttsNovelId = useTts((state) => state.novelId);
+  const ttsChapterId = useTts((state) => state.chapterId);
+  const ttsSentence = useTts((state) => state.sentence);
+  const ttsError = useTts((state) => state.error);
+  const ttsActive = ttsStatus !== 'idle' && ttsNovelId === novelId;
+  const voiceSpeaking = ttsActive && (ttsStatus === 'playing' || ttsStatus === 'loading');
   const session = useReadingSession(
-    novelId !== null && chapter && hasText
+    novelId !== null && chapter && hasText && !voiceSpeaking
       ? {
           novelId,
           chapterId,
@@ -353,6 +365,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       switch (message.type) {
         case 'ready':
           ready.current = true;
+          setReadyCount((count) => count + 1);
           // Settings may have changed while the page was loading.
           send(
             settingsCommand(latest.current.settings, latest.current.insets, FONTS_URI, (path) =>
@@ -437,6 +450,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       { key: 'copy', label: t('reader.copy') },
       { key: 'share', label: t('reader.share') },
       { key: 'searchBook', label: t('reader.searchBook') },
+      { key: 'speak', label: t('tts.fromHere') },
     ],
     [t],
   );
@@ -470,11 +484,20 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           setBookQuery(text.slice(0, 80));
           setPanel('bookSearch');
           break;
+        case 'speak':
+          if (!anchor) {
+            showToast(t('reader.quoteUnavailable'));
+          } else if (ttsActive && ttsChapterId === chapterId) {
+            readAloudFromPlace(anchor.b, anchor.o);
+          } else {
+            void startReadingAloud(chapterId, { kind: 'place', b: anchor.b, o: anchor.o });
+          }
+          break;
         default:
           break;
       }
     },
-    [send, t, novelId, chapterId, lang],
+    [send, t, novelId, chapterId, lang, ttsActive, ttsChapterId],
   );
 
   // ------------------------------------------------------------------ search
@@ -505,6 +528,59 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       }
     },
     [chapterId, flushThen, openChapter, send],
+  );
+
+  // ------------------------------------------------------------------ voice
+
+  // The sentence being said is highlighted and kept visible.
+  const spokenRange =
+    ttsActive && ttsChapterId === chapterId && ttsSentence
+      ? `${ttsSentence.b}:${ttsSentence.start}:${ttsSentence.end}`
+      : '';
+  const sendSpoken = useCallback(() => {
+    if (!ready.current) {
+      return;
+    }
+    const [b, start, end] = spokenRange.split(':').map(Number);
+    send({ name: 'highlight', range: spokenRange === '' ? null : { b, start, end } });
+  }, [send, spokenRange]);
+  useEffect(() => {
+    sendSpoken();
+    // Sent again once a newly loaded chapter is ready.
+  }, [sendSpoken, readyCount]);
+
+  // When the voice moves on to another chapter, the reader follows it.
+  const followedChapter = useRef<number | null>(null);
+  useEffect(() => {
+    const previous = followedChapter.current;
+    followedChapter.current = ttsActive ? ttsChapterId : null;
+    if (
+      ttsActive &&
+      ttsChapterId !== null &&
+      ttsChapterId !== chapterId &&
+      previous === chapterId
+    ) {
+      openChapter({ id: ttsChapterId });
+    }
+  }, [ttsActive, ttsChapterId, chapterId, openChapter]);
+
+  useEffect(() => {
+    if (ttsError) {
+      showToast(ttsError === 'engine' ? t('tts.errorEngine') : t('tts.errorNoText'));
+    }
+  }, [ttsError, t]);
+
+  const startVoice = useCallback(
+    (from: 'start' | 'position') => {
+      setBarsVisible(false);
+      if (from === 'start') {
+        void startReadingAloud(chapterId, { kind: 'start' });
+      } else {
+        // The exact place on screen is saved first: the voice starts from there.
+        flushThen(() => void startReadingAloud(chapterId, { kind: 'position' }));
+      }
+    },
+    [chapterId, flushThen],
   );
 
   // ------------------------------------------------------------------ device
@@ -774,6 +850,12 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
                           ]
                         : []),
                       {
+                        label: t('tts.fromStart'),
+                        icon: 'account-voice' as const,
+                        disabled: !document,
+                        onPress: () => startVoice('start'),
+                      },
+                      {
                         label: t('reader.editChapter'),
                         icon: 'pencil-outline',
                         disabled: !document,
@@ -850,6 +932,14 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
                 onPress={goNext}
               />
               <IconButton
+                icon={ttsActive ? 'stop-circle-outline' : 'account-voice'}
+                label={ttsActive ? t('tts.stop') : t('tts.readAloud')}
+                color={ttsActive ? appTheme.colors.primary : undefined}
+                disabled={!document && !ttsActive}
+                onPress={() => (ttsActive ? stopReadingAloud() : startVoice('position'))}
+                onLongPress={() => startVoice('start')}
+              />
+              <IconButton
                 icon="format-size"
                 label={t('reader.settings')}
                 onPress={() => setPanel('settings')}
@@ -857,6 +947,10 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
             </View>
           </View>
         </>
+      ) : null}
+
+      {ttsActive && !searching ? (
+        <TtsBar bottom={safeInsets.bottom + (barsVisible ? 56 + SPACING.md : SPACING.xl)} />
       ) : null}
 
       <ReaderSettingsSheet

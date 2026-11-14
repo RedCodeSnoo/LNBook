@@ -1,6 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Lets the app find the installed speech engines (Android 11+). -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.TTS_SERVICE" />
+    </intent>
+  </queries>
+
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -10,6 +18,12 @@
       android:name="expo.modules.lnbooksystem.DownloadService"
       android:exported="false"
       android:foregroundServiceType="dataSync" />
+
+    <!-- Voice: reading aloud continues with the screen off, with media controls. -->
+    <service
+      android:name="expo.modules.lnbooksystem.TtsService"
+      android:exported="false"
+      android:foregroundServiceType="mediaPlayback" />
 
     <!-- Gives the Android installer access to a downloaded update. -->
     <provider

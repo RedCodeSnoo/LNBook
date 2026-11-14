@@ -39,6 +39,7 @@ export type RootStackParamList = {
   settingsUpdates: undefined;
   settingsLibrary: undefined;
   backup: undefined;
+  settingsVoice: undefined;
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };
 };

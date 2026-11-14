@@ -137,6 +137,7 @@ jobs:
             scripts/ci-maestro.sh .maestro/browse.yaml
             scripts/ci-maestro.sh .maestro/downloads.yaml
             scripts/ci-maestro.sh .maestro/backup.yaml
+            scripts/ci-maestro.sh .maestro/voice.yaml
 
       - uses: actions/upload-artifact@v7
         if: failure()
