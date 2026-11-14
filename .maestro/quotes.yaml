@@ -16,7 +16,6 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'New folder'
 - inputText: 'Tragic'
 - tapOn: 'Add a folder'
-- hideKeyboard
 - tapOn: 'Save'
 - back
 - tapOn: 'Quotes'
