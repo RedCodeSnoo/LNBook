@@ -8,8 +8,8 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Ada Author'
 - assertVisible: '0 / 5 chapters'
 - scrollUntilVisible:
-    element: '.*Volume 2 – Dusk.*'
+    element: '.*Chapter 4: End.*'
     direction: DOWN
-- assertVisible: '.*Chapter 4: End.*'
+- assertVisible: '.*Volume 2 – Dusk.*'
 - tapOn: '.*Volume 2 – Dusk.*'
 - assertNotVisible: '.*Chapter 4: End.*'
