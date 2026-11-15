@@ -11,12 +11,15 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
+import { deleteEstimatedTime, loadEstimatedTimes } from '../stats/progressRepository';
 import { FastScroller, type FastScrollerHandle } from './FastScroller';
+import { ProgressSheet } from './ProgressSheet';
 import { useBackHandler } from '../../app/useBackHandler';
 import { getDb } from '../../db/client';
 import { invalidate, useQuery } from '../../db/invalidation';
 import type { Chapter, Volume } from '../../db/schema';
 import { deviceFiles } from '../../services/deviceFileStore';
+import { formatDuration } from '../../services/format';
 import {
   AppBar,
   AppText,
@@ -93,6 +96,8 @@ type Prompt =
   | { kind: 'categories' }
   | { kind: 'remove' }
   | { kind: 'reset' }
+  | { kind: 'progress' }
+  | { kind: 'deleteEstimate' }
   | { kind: 'download' }
   | { kind: 'downloadRange' }
   | { kind: 'export' }
@@ -153,6 +158,11 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           ? buildChapterList(chapters, volumes, { ascending, filters, search, collapsed })
           : [],
     [tab, chapters, volumes, ascending, filters, search, collapsed],
+  );
+  const estimated = useQuery(
+    () => loadEstimatedTimes(getDb(), novelId),
+    ['chapters', 'novel', 'stats'],
+    [novelId],
   );
   const readCount = useMemo(() => chapters.filter((chapter) => chapter.isRead).length, [chapters]);
 
@@ -381,6 +391,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         actions={actions}
         onContinue={() => resume && openChapter(resume.chapter)}
         onOpenStats={() => navigation.navigate('novelStats', { novelId })}
+        estimatedMs={estimated.totalMs}
       />
       <SegmentedTabs<NovelTab>
         value={tab}
@@ -599,6 +610,18 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                   onPress: () => navigation.navigate('replacements', { novelId }),
                 },
                 {
+                  label: t('progress.title'),
+                  icon: 'progress-check',
+                  disabled: chapters.length === 0,
+                  onPress: () => setPrompt({ kind: 'progress' }),
+                },
+                {
+                  label: t('progress.deleteEstimate'),
+                  icon: 'timer-remove-outline',
+                  disabled: estimated.totalMs === 0,
+                  onPress: () => setPrompt({ kind: 'deleteEstimate' }),
+                },
+                {
                   label: t('novel.resetProgress'),
                   icon: 'restart',
                   onPress: () => {
@@ -630,7 +653,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           onScroll={onListScroll}
           scrollEventThrottle={32}
           data={items}
-          extraData={[selection, translatedChapters, activeLang]}
+          extraData={[selection, translatedChapters, activeLang, estimated]}
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.type}
           ListHeaderComponent={header}
@@ -652,6 +675,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                 selected={selection.includes(item.chapter.id)}
                 translated={translatedChapters.has(item.chapter.id)}
                 translatedTitle={activeLang ? translatedChapters.get(item.chapter.id) : null}
+                estimated={estimated.chapterIds.has(item.chapter.id)}
                 onPress={selectionMode ? toggleSelected : openChapter}
                 onLongPress={onLongPress}
               />
@@ -1082,6 +1106,22 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           />
         </View>
       </ConfirmDialog>
+      {prompt.kind === 'progress' ? <ProgressSheet novel={novel} onClose={closePrompt} /> : null}
+      <ConfirmDialog
+        visible={prompt.kind === 'deleteEstimate'}
+        title={t('progress.deleteEstimate')}
+        message={t('progress.deleteEstimateMessage', {
+          time: formatDuration(estimated.totalMs, t),
+        })}
+        confirmLabel={t('common.delete')}
+        danger
+        onClose={closePrompt}
+        onConfirm={() => {
+          closePrompt();
+          deleteEstimatedTime(getDb(), novelId);
+          invalidate('chapters', 'library', 'novel', 'stats');
+        }}
+      />
     </Screen>
   );
 }

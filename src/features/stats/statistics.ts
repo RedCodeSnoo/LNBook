@@ -20,6 +20,16 @@ export const STREAK_MIN_MS = 5 * 60 * 1000;
 /** Shorter sessions say nothing about the reading speed. */
 const SPEED_MIN_MS = 60 * 1000;
 
+/** Time given by "Set my progress": no date, never read for real. */
+export function isEstimated(row: Pick<SessionRow, 'mode'>): boolean {
+  return row.mode === 'estimated';
+}
+
+/** Sessions really read or listened to (what days, hours and speed are made of). */
+export function realSessions(rows: SessionRow[]): SessionRow[] {
+  return rows.every((row) => !isEstimated(row)) ? rows : rows.filter((row) => !isEstimated(row));
+}
+
 export function dayStart(timestamp: number): number {
   const date = new Date(timestamp);
   date.setHours(0, 0, 0, 0);
@@ -39,31 +49,47 @@ function monthStart(timestamp: number, offset = 0): number {
 }
 
 export interface Totals {
+  /** Everything, estimated time included. */
   totalMs: number;
   readMs: number;
   listenMs: number;
+  /** Part of `totalMs` given by "Set my progress". */
+  estimatedMs: number;
   words: number;
+  /** Real sessions only. */
   sessions: number;
 }
 
 export function totals(rows: SessionRow[]): Totals {
-  const result: Totals = { totalMs: 0, readMs: 0, listenMs: 0, words: 0, sessions: rows.length };
+  const result: Totals = {
+    totalMs: 0,
+    readMs: 0,
+    listenMs: 0,
+    estimatedMs: 0,
+    words: 0,
+    sessions: 0,
+  };
   for (const row of rows) {
     result.totalMs += row.durationMs;
-    if (row.mode === 'listen') {
-      result.listenMs += row.durationMs;
+    if (row.mode === 'estimated') {
+      result.estimatedMs += row.durationMs;
     } else {
-      result.readMs += row.durationMs;
+      result.sessions += 1;
+      if (row.mode === 'listen') {
+        result.listenMs += row.durationMs;
+      } else {
+        result.readMs += row.durationMs;
+      }
     }
     result.words += row.words;
   }
   return result;
 }
 
-/** Time per day (start of the local day → milliseconds). */
+/** Time per day (start of the local day → milliseconds); estimated time has no day. */
 export function dailyTotals(rows: SessionRow[]): Map<number, number> {
   const days = new Map<number, number>();
-  for (const row of rows) {
+  for (const row of realSessions(rows)) {
     const day = dayStart(row.startedAt);
     days.set(day, (days.get(day) ?? 0) + row.durationMs);
   }
@@ -80,7 +106,8 @@ export interface ChartBar {
 }
 
 /** Bars of the "time per day" chart for a period ending today. */
-export function chartBars(rows: SessionRow[], period: ChartPeriod, now: number): ChartBar[] {
+export function chartBars(allRows: SessionRow[], period: ChartPeriod, now: number): ChartBar[] {
+  const rows = realSessions(allRows);
   if (period === '7d' || period === '30d') {
     const days = dailyTotals(rows);
     const count = period === '7d' ? 7 : 30;
@@ -213,7 +240,7 @@ export function readingSpeed(rows: SessionRow[]): number | null {
 /** Time per hour of the day (24 values), each session being spread over the hours it covers. */
 export function hourlyTotals(rows: SessionRow[]): number[] {
   const hours = new Array<number>(24).fill(0);
-  for (const row of rows) {
+  for (const row of realSessions(rows)) {
     let cursor = row.startedAt;
     let left = row.durationMs;
     // Pauses are not known here: the active time is laid out from the start of the session.
@@ -260,8 +287,11 @@ export function novelTimes(
   let last: number | null = null;
   const chapters = new Set<number>();
   for (const row of rows) {
-    first = first === null ? row.startedAt : Math.min(first, row.startedAt);
-    last = last === null ? row.startedAt : Math.max(last, row.startedAt);
+    // Estimated time has no reading date.
+    if (!isEstimated(row)) {
+      first = first === null ? row.startedAt : Math.min(first, row.startedAt);
+      last = last === null ? row.startedAt : Math.max(last, row.startedAt);
+    }
     if (row.chapterId !== null) {
       chapters.add(row.chapterId);
     }
@@ -278,5 +308,38 @@ export function novelTimes(
     chaptersWithTime: chapters.size,
     averagePerChapterMs: average === null ? null : Math.round(average),
     remainingMs: average === null ? null : Math.round(average * left),
+  };
+}
+
+export interface Overview {
+  totals: Totals;
+  days: Map<number, number>;
+  todayMs: number;
+  streaks: Streaks;
+  weeks: HeatmapDay[][];
+  speed: number | null;
+  hours: number[];
+  byNovel: [number, number][];
+  /** '' = original language. */
+  byLanguage: [string, number][];
+}
+
+/**
+ * Everything the statistics screen shows. Estimated time ("Set my progress") counts in the
+ * totals, the ranking, the time per novel and per language, never in what depends on a
+ * real day or hour: streaks, today, time per day, calendar, favourite hours and speed.
+ */
+export function overview(rows: SessionRow[], now: number): Overview {
+  const days = dailyTotals(rows);
+  return {
+    totals: totals(rows),
+    days,
+    todayMs: days.get(dayStart(now)) ?? 0,
+    streaks: streaks(days, now),
+    weeks: heatmap(days, now),
+    speed: readingSpeed(rows),
+    hours: hourlyTotals(rows),
+    byNovel: totalsBy(rows, (row) => row.novelId),
+    byLanguage: totalsBy(rows, (row) => row.lang ?? ''),
   };
 }

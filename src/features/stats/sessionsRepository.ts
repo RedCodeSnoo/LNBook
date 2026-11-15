@@ -55,6 +55,15 @@ export function saveSession(db: AppDatabase, input: SessionInput, sessionId?: nu
   return db.transaction((tx) => {
     let id = sessionId;
     if (id === undefined) {
+      // Real reading replaces the time estimated with "Set my progress".
+      tx.delete(readingSessions)
+        .where(
+          and(
+            eq(readingSessions.chapterId, input.chapterId),
+            eq(readingSessions.mode, 'estimated'),
+          ),
+        )
+        .run();
       id = tx.insert(readingSessions).values(input).returning({ id: readingSessions.id }).get().id;
     } else {
       tx.update(readingSessions)

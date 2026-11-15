@@ -1,0 +1,21 @@
+# Runs after the reading flows: "Set my progress" marks chapters as read with an estimated
+# time, shown with "~" on the novel page and in the statistics, then deleted.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'Sample Saga, Ada Author.*'
+- tapOn: 'More actions'
+- tapOn: 'Set my progress'
+- assertVisible: 'Last chapter read'
+- assertVisible: 'Reading speed.*'
+- assertVisible: '.*estimated time.*'
+- scrollUntilVisible:
+    element: 'Confirm'
+    direction: DOWN
+- tapOn: 'Confirm'
+- assertVisible: '.*including ~.*'
+- takeScreenshot: shot-progress
+- tapOn: 'More actions'
+- tapOn: 'Delete the estimated time'
+- tapOn: 'Delete'
+- assertNotVisible: '.*including ~.*'

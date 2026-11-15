@@ -17,6 +17,8 @@ interface ChapterRowProps {
   translated?: boolean;
   /** Title in that language. */
   translatedTitle?: string | null;
+  /** The time of the chapter is estimated ("Set my progress"). */
+  estimated?: boolean;
   onPress: (chapter: Chapter) => void;
   onLongPress?: (chapter: Chapter) => void;
 }
@@ -27,6 +29,7 @@ function ChapterRowBase({
   current,
   translated,
   translatedTitle,
+  estimated,
   onPress,
   onLongPress,
 }: ChapterRowProps) {
@@ -39,7 +42,11 @@ function ChapterRowBase({
   const title = translatedTitle || chapter.title;
   const meta = [
     chapter.releaseTime,
-    chapter.readMs > 0 ? formatDuration(chapter.readMs, t) : null,
+    chapter.readMs > 0
+      ? estimated
+        ? t('progress.approxChapter', { time: formatDuration(chapter.readMs, t) })
+        : formatDuration(chapter.readMs, t)
+      : null,
     !chapter.isRead && chapter.progress > 0 ? formatPercent(chapter.progress) : null,
   ].filter(Boolean);
 

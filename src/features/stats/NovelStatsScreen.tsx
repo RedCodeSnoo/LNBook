@@ -48,6 +48,15 @@ export function NovelStatsScreen({ navigation, route }: RootScreenProps<'novelSt
   );
   const [now] = useState(() => Date.now());
   const times = useMemo(() => novelTimes(sessions, counts), [sessions, counts]);
+  const estimatedChapters = useMemo(
+    () =>
+      new Set(
+        sessions
+          .filter((row) => row.mode === 'estimated' && row.chapterId !== null)
+          .map((row) => row.chapterId as number),
+      ),
+    [sessions],
+  );
   const bars = useMemo(
     () => timeBars(chartBars(sessions, period, now), i18n.language, t),
     [sessions, period, now, i18n.language, t],
@@ -59,6 +68,9 @@ export function NovelStatsScreen({ navigation, route }: RootScreenProps<'novelSt
   const facts: [string, string][] = [
     [t('stats.reading'), duration(times.readMs)],
     [t('stats.listening'), duration(times.listenMs)],
+    ...(times.estimatedMs > 0
+      ? ([[t('stats.estimated'), `~${duration(times.estimatedMs)}`]] as [string, string][])
+      : []),
     [t('stats.firstDay'), date(times.firstDay)],
     [t('stats.lastDay'), date(times.lastDay)],
     [t('stats.chaptersRead'), t('novel.progressCount', { read: counts.read, total: counts.total })],
@@ -135,7 +147,9 @@ export function NovelStatsScreen({ navigation, route }: RootScreenProps<'novelSt
                   onPress={() => navigation.navigate('reader', { chapterId: chapter.id })}
                   right={
                     <AppText variant="label" secondary>
-                      {duration(chapter.readMs)}
+                      {estimatedChapters.has(chapter.id)
+                        ? t('progress.approxChapter', { time: duration(chapter.readMs) })
+                        : duration(chapter.readMs)}
                     </AppText>
                   }
                 />

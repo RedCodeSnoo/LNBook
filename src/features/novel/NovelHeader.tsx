@@ -39,6 +39,7 @@ export function NovelHeader({
   actions,
   onContinue,
   onOpenStats,
+  estimatedMs = 0,
 }: {
   novel: Novel;
   /** Original language first, then every language with translated chapters. */
@@ -54,6 +55,8 @@ export function NovelHeader({
   actions: HeaderAction[];
   onContinue: () => void;
   onOpenStats?: () => void;
+  /** Part of the time given by "Set my progress". */
+  estimatedMs?: number;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -186,9 +189,15 @@ export function NovelHeader({
         >
           <Icon name="clock-outline" size={18} color={colors.textSecondary} />
           <View>
-            <AppText variant="bodyStrong">{formatDuration(novel.totalReadMs, t)}</AppText>
+            <AppText variant="bodyStrong">
+              {estimatedMs > 0
+                ? t('progress.approx', { time: formatDuration(novel.totalReadMs, t) })
+                : formatDuration(novel.totalReadMs, t)}
+            </AppText>
             <AppText variant="caption" secondary>
-              {t('novel.timeSpent')}
+              {estimatedMs > 0
+                ? t('progress.timeSpentEstimated', { time: formatDuration(estimatedMs, t) })
+                : t('novel.timeSpent')}
             </AppText>
           </View>
         </Pressable>

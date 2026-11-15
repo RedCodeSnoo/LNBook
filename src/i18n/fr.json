@@ -971,7 +971,9 @@
     "lastDay": "Dernier jour",
     "averagePerChapter": "Moyenne par chapitre",
     "remaining": "Temps restant estimé",
-    "timePerChapter": "Temps par chapitre"
+    "timePerChapter": "Temps par chapitre",
+    "includingEstimated": "dont {{time}} estimées (« Définir ma progression »)",
+    "estimated": "Temps estimé"
   },
   "advanced": {
     "userAgent": "User-Agent",
@@ -996,5 +998,33 @@
     "resetMessage": "Tout est effacé de ce téléphone : bibliothèque, progression, citations, statistiques, téléchargements et réglages. L'app se ferme ensuite. Fais d'abord une sauvegarde si tu veux garder tes données.",
     "resetConfirm": "Tout effacer",
     "failed": "L'action a échoué"
+  },
+  "progress": {
+    "title": "Définir ma progression",
+    "lastChapter": "Dernier chapitre lu",
+    "changeChapter": "Chercher un chapitre par numéro ou titre",
+    "noChapter": "Choisis un chapitre",
+    "noMatch": "Aucun chapitre ne correspond",
+    "chapterHint": "Tous les chapitres jusqu'à celui-ci sont marqués lus, ceux d'après restent non lus.",
+    "speed": "Vitesse de lecture (mots par minute)",
+    "speedHint": "Ta vitesse moyenne mesurée : {{count}} mots/min.",
+    "wordsPerChapter": "Mots par chapitre (estimation)",
+    "usedFor_one": "Utilisé pour {{count}} chapitre sur {{total}} (texte non disponible).",
+    "usedFor_other": "Utilisé pour {{count}} chapitres sur {{total}} (texte non disponible).",
+    "language": "Langue dans laquelle tu as lu ces chapitres",
+    "original": "Langue d'origine",
+    "originalLanguage": "{{language}} (original)",
+    "preview_one": "{{count}} chapitre, ~{{words}} mots, temps estimé : {{time}}",
+    "preview_other": "{{count}} chapitres, ~{{words}} mots, temps estimé : {{time}}",
+    "keptReal_one": "{{count}} chapitre garde son vrai temps de lecture.",
+    "keptReal_other": "{{count}} chapitres gardent leur vrai temps de lecture.",
+    "confirm": "Valider",
+    "saved_one": "Progression définie : {{count}} chapitre lu",
+    "saved_other": "Progression définie : {{count}} chapitres lus",
+    "deleteEstimate": "Supprimer le temps estimé",
+    "deleteEstimateMessage": "Le temps estimé de ce novel ({{time}}) est retiré des statistiques. Les chapitres restent marqués lus.",
+    "approx": "~{{time}}",
+    "approxChapter": "~{{time}} (estimé)",
+    "timeSpentEstimated": "dont ~{{time}} estimé"
   }
 }

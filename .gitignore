@@ -50,3 +50,7 @@ Thumbs.db
 .vscode/
 *.swp
 .drizzle/
+
+# Local test book (never committed)
+demo.epub
+*:Zone.Identifier

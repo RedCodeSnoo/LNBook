@@ -20,17 +20,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { RADIUS, SPACING } from '../../theme/typography';
 import { languageInfo } from '../translation/languages';
 import { BarChart, Heatmap, ShareRows } from './charts';
-import {
-  chartBars,
-  dailyTotals,
-  heatmap,
-  hourlyTotals,
-  readingSpeed,
-  streaks,
-  totals,
-  totalsBy,
-  type ChartPeriod,
-} from './statistics';
+import { chartBars, overview, totalsBy, type ChartPeriod } from './statistics';
 import { hourBars, timeBars } from './statsFormat';
 import { loadCounts, loadNovelLabels, loadSessions } from './statsRepository';
 
@@ -47,19 +37,7 @@ export function StatsScreen({ navigation }: RootScreenProps<'stats'>) {
 
   // "Now" is read once per visit: the charts do not move while they are looked at.
   const [now] = useState(() => Date.now());
-  const data = useMemo(() => {
-    const days = dailyTotals(sessions);
-    return {
-      totals: totals(sessions),
-      days,
-      streaks: streaks(days, now),
-      weeks: heatmap(days, now),
-      speed: readingSpeed(sessions),
-      hours: hourlyTotals(sessions),
-      byNovel: totalsBy(sessions, (row) => row.novelId),
-      byLanguage: totalsBy(sessions, (row) => row.lang ?? ''),
-    };
-  }, [sessions, now]);
+  const data = useMemo(() => overview(sessions, now), [sessions, now]);
   const bars = useMemo(
     () => timeBars(chartBars(sessions, period, now), i18n.language, t),
     [sessions, period, now, i18n.language, t],
@@ -120,6 +98,11 @@ export function StatsScreen({ navigation }: RootScreenProps<'stats'>) {
                 listened: duration(data.totals.listenMs),
               })}
             </AppText>
+            {data.totals.estimatedMs > 0 ? (
+              <AppText variant="label" color={colors.onPrimaryContainer}>
+                {t('stats.includingEstimated', { time: duration(data.totals.estimatedMs) })}
+              </AppText>
+            ) : null}
           </View>
 
           <View style={styles.tiles}>

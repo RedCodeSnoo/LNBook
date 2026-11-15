@@ -971,7 +971,9 @@
     "lastDay": "Last day",
     "averagePerChapter": "Average per chapter",
     "remaining": "Estimated time left",
-    "timePerChapter": "Time per chapter"
+    "timePerChapter": "Time per chapter",
+    "includingEstimated": "including {{time}} estimated (\"Set my progress\")",
+    "estimated": "Estimated time"
   },
   "advanced": {
     "userAgent": "User-Agent",
@@ -996,5 +998,33 @@
     "resetMessage": "Everything is erased from this phone: library, progress, quotes, statistics, downloads and settings. The app then closes. Make a backup first if you want to keep your data.",
     "resetConfirm": "Erase everything",
     "failed": "The action failed"
+  },
+  "progress": {
+    "title": "Set my progress",
+    "lastChapter": "Last chapter read",
+    "changeChapter": "Search a chapter by number or title",
+    "noChapter": "Choose a chapter",
+    "noMatch": "No chapter matches",
+    "chapterHint": "Every chapter up to this one is marked as read; the following ones stay unread.",
+    "speed": "Reading speed (words per minute)",
+    "speedHint": "Your measured average speed: {{count}} words/min.",
+    "wordsPerChapter": "Words per chapter (estimate)",
+    "usedFor_one": "Used for {{count}} chapter out of {{total}} (text not available).",
+    "usedFor_other": "Used for {{count}} chapters out of {{total}} (text not available).",
+    "language": "Language you read these chapters in",
+    "original": "Original language",
+    "originalLanguage": "{{language}} (original)",
+    "preview_one": "{{count}} chapter, ~{{words}} words, estimated time: {{time}}",
+    "preview_other": "{{count}} chapters, ~{{words}} words, estimated time: {{time}}",
+    "keptReal_one": "{{count}} chapter keeps its real reading time.",
+    "keptReal_other": "{{count}} chapters keep their real reading time.",
+    "confirm": "Confirm",
+    "saved_one": "Progress set: {{count}} chapter read",
+    "saved_other": "Progress set: {{count}} chapters read",
+    "deleteEstimate": "Delete the estimated time",
+    "deleteEstimateMessage": "The estimated time of this novel ({{time}}) leaves the statistics. The chapters stay read.",
+    "approx": "~{{time}}",
+    "approxChapter": "~{{time}} (estimated)",
+    "timeSpentEstimated": "including ~{{time}} estimated"
   }
 }

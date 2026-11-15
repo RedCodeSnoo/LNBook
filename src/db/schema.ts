@@ -23,7 +23,8 @@ const bool = (name: string, fallback = false) =>
 export type NovelOrigin = 'local' | 'online';
 export type VolumeOrigin = 'toc' | 'detected' | 'manual';
 export type TranslationEngine = 'mlkit' | 'deepl';
-export type SessionMode = 'read' | 'listen';
+/** 'estimated': time set with "Set my progress", without real reading date. */
+export type SessionMode = 'read' | 'listen' | 'estimated';
 export type DownloadStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed';
 
 export const novels = sqliteTable(
