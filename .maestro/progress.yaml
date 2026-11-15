@@ -9,6 +9,11 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Last chapter read'
 - assertVisible: 'Reading speed.*'
 - assertVisible: '.*estimated time.*'
+# The chapter picker searches by number.
+- tapOn:
+    id: 'progress-chapter'
+- inputText: '2'
+- tapOn: '2 · .*'
 - scrollUntilVisible:
     element: 'Confirm'
     direction: DOWN

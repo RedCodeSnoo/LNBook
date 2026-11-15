@@ -163,6 +163,7 @@ export function ProgressSheet({ novel, onClose }: { novel: Novel; onClose: () =>
         <Pressable
           accessibilityRole="button"
           accessibilityHint={t('progress.changeChapter')}
+          testID="progress-chapter"
           onPress={() => setPicking(!picking)}
           android_ripple={{ color: colors.ripple }}
           style={[styles.picker, { backgroundColor: colors.surfaceVariant }]}
