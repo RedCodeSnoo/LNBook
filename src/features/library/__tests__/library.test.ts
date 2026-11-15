@@ -16,6 +16,7 @@ import {
   renameCategory,
   reorderCategories,
   seedDefaultCategories,
+  translateDefaultCategories,
   setNovelCategories,
 } from '../libraryRepository';
 import { applyLibraryView, NO_FILTERS, type LibraryView } from '../libraryView';
@@ -241,5 +242,24 @@ describe('library listing and view', () => {
     expect(files.exists(`novels/${a}`)).toBe(false);
     expect(files.exists(`novels/${b}`)).toBe(true);
     expect(db.select().from(chapters).where(eq(chapters.novelId, a)).all()).toEqual([]);
+  });
+
+  it('translates the default categories that kept their name', () => {
+    const { db } = createTestDatabase();
+    seedDefaultCategories(db, ['Reading', 'To read', 'Finished']);
+    const [reading] = listCategories(db);
+    renameCategory(db, reading.id, 'My shelf');
+    expect(
+      translateDefaultCategories(
+        db,
+        ['Reading', 'To read', 'Finished'],
+        ['En cours', 'À lire', 'Terminés'],
+      ),
+    ).toBe(2);
+    expect(listCategories(db).map((category) => category.name)).toEqual([
+      'My shelf',
+      'À lire',
+      'Terminés',
+    ]);
   });
 });

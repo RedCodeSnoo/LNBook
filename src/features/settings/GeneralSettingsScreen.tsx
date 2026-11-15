@@ -2,7 +2,10 @@ import { ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
-import { changeLanguage } from '../../i18n';
+import { getDb } from '../../db/client';
+import { invalidate } from '../../db/invalidation';
+import i18n, { changeLanguage, languageFor } from '../../i18n';
+import { DEFAULT_CATEGORY_KEYS, translateDefaultCategories } from '../library/libraryRepository';
 import { AppBar, RadioItem, Screen, SectionHeader } from '../../theme/components';
 import type { DateFormatSetting, LanguageSetting, TabName } from './settings';
 import { setSetting, useSetting } from './settingsStore';
@@ -39,8 +42,17 @@ export function GeneralSettingsScreen({ navigation }: RootScreenProps<'settingsG
             title={t(option.labelKey)}
             checked={language === option.value}
             onPress={() => {
+              const names = (lang: string) => {
+                const translate = i18n.getFixedT(lang);
+                return DEFAULT_CATEGORY_KEYS.map((key) => translate(key));
+              };
+              const before = names(i18n.language);
+              const after = names(languageFor(option.value));
               setSetting('language', option.value);
               changeLanguage(option.value);
+              if (translateDefaultCategories(getDb(), before, after) > 0) {
+                invalidate('categories', 'library');
+              }
             }}
           />
         ))}

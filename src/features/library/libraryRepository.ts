@@ -111,11 +111,35 @@ export function setCategoryExcluded(db: AppDatabase, id: number, excluded: boole
 }
 
 /** Creates the default shelves the first time the app starts. */
+/** Translation keys of the categories created on the first launch. */
+export const DEFAULT_CATEGORY_KEYS = [
+  'categories.defaultReading',
+  'categories.defaultToRead',
+  'categories.defaultFinished',
+];
+
 export function seedDefaultCategories(db: AppDatabase, names: string[]): void {
   if (db.select({ id: categories.id }).from(categories).limit(1).get()) {
     return;
   }
   names.forEach((name) => createCategory(db, name));
+}
+
+/**
+ * After a change of interface language: the default categories that still have their
+ * default name (`from[i]`) take the name in the new language (`to[i]`).
+ * Categories renamed by the user are left alone.
+ */
+export function translateDefaultCategories(db: AppDatabase, from: string[], to: string[]): number {
+  let renamed = 0;
+  for (const category of db.select().from(categories).all()) {
+    const index = from.indexOf(category.name);
+    if (index >= 0 && to[index] && to[index] !== category.name) {
+      db.update(categories).set({ name: to[index] }).where(eq(categories.id, category.id)).run();
+      renamed += 1;
+    }
+  }
+  return renamed;
 }
 
 export function getNovelCategoryIds(db: AppDatabase, novelId: number): number[] {

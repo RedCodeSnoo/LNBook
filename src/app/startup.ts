@@ -1,5 +1,8 @@
 import { getDb, openAppDatabase } from '../db/client';
-import { seedDefaultCategories } from '../features/library/libraryRepository';
+import {
+  DEFAULT_CATEGORY_KEYS,
+  seedDefaultCategories,
+} from '../features/library/libraryRepository';
 import { readValue, writeValue } from '../features/settings/settingsRepository';
 import { loadSettings } from '../features/settings/settingsStore';
 import i18n, { initI18n } from '../i18n';
@@ -14,11 +17,10 @@ function seedDefaults(): void {
   if (readValue(db, 'defaultsSeeded', false)) {
     return;
   }
-  seedDefaultCategories(db, [
-    i18n.t('categories.defaultReading'),
-    i18n.t('categories.defaultToRead'),
-    i18n.t('categories.defaultFinished'),
-  ]);
+  seedDefaultCategories(
+    db,
+    DEFAULT_CATEGORY_KEYS.map((key) => i18n.t(key)),
+  );
   writeValue(db, 'defaultsSeeded', true);
 }
 

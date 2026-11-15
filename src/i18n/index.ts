@@ -50,6 +50,11 @@ export function initI18n(setting: 'system' | AppLanguage): void {
   });
 }
 
+/** Language the interface uses for a setting. */
+export function languageFor(setting: 'system' | AppLanguage): AppLanguage {
+  return resolveLanguage(setting, deviceLanguages());
+}
+
 export function changeLanguage(setting: 'system' | AppLanguage): void {
   void i18n.changeLanguage(resolveLanguage(setting, deviceLanguages()));
 }
