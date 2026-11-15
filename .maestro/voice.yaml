@@ -10,9 +10,7 @@ appId: com.redcodesnoo.lnbook
 - scrollUntilVisible:
     element: '.*Speed.*'
     direction: DOWN
-- scrollUntilVisible:
-    element: 'Install more voices'
-    direction: DOWN
+- assertVisible: '.*Pitch.*'
 - tapOn: 'Back'
 - tapOn: 'Back'
 - tapOn: 'Library'
