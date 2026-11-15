@@ -7,7 +7,7 @@ import { AppBar, ListItem, Screen, type IconName } from '../../theme/components'
 interface Group {
   key: string;
   icon: IconName;
-  route?:
+  route:
     | 'settingsGeneral'
     | 'settingsAppearance'
     | 'settingsLibrary'
@@ -45,14 +45,7 @@ export function SettingsScreen({ navigation }: RootScreenProps<'settings'>) {
             icon={group.icon}
             title={t(`settings.${group.key}`)}
             subtitle={t(`settings.${group.key}Hint`)}
-            onPress={() =>
-              group.route
-                ? navigation.navigate(group.route)
-                : navigation.navigate('placeholder', {
-                    titleKey: `settings.${group.key}`,
-                    icon: group.icon,
-                  })
-            }
+            onPress={() => navigation.navigate(group.route)}
           />
         ))}
       </ScrollView>

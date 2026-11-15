@@ -49,8 +49,6 @@ export type RootStackParamList = {
   licenses: undefined;
   /** Glossary of a novel; `term` proposes a new entry (text selected in the reader). */
   glossary: { novelId: number; term?: string };
-  /** Screen of a feature that is not available yet. */
-  placeholder: { titleKey: string; icon: string };
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

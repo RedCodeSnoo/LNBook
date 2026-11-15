@@ -98,6 +98,43 @@ export function VoiceSettingsScreen({ navigation }: RootScreenProps<'settingsVoi
           </>
         ) : null}
 
+        <SectionHeader title={t('tts.reading')} />
+        <View style={styles.steppers}>
+          <Stepper
+            label={t('tts.rate')}
+            value={rate}
+            min={0.5}
+            max={3}
+            step={0.1}
+            format={(value) => `${value.toFixed(1)}×`}
+            onChange={(value) => setSetting('ttsRate', value)}
+          />
+          <Stepper
+            label={t('tts.pitch')}
+            value={pitch}
+            min={0.5}
+            max={2}
+            step={0.1}
+            format={(value) => value.toFixed(1)}
+            onChange={(value) => setSetting('ttsPitch', value)}
+          />
+          <Stepper
+            label={t('tts.paragraphPause')}
+            value={pauseMs}
+            min={0}
+            max={2000}
+            step={50}
+            format={(value) => `${(value / 1000).toFixed(2)} s`}
+            onChange={(value) => setSetting('ttsPauseMs', value)}
+          />
+        </View>
+        <SwitchItem
+          icon="skip-next-outline"
+          title={t('tts.autoNext')}
+          subtitle={t('tts.autoNextHint')}
+          value={autoNext}
+          onValueChange={(value) => setSetting('ttsAutoNext', value)}
+        />
         <SectionHeader title={t('tts.voices')} />
         {voices === null ? (
           <AppText secondary style={styles.hint}>
@@ -142,44 +179,6 @@ export function VoiceSettingsScreen({ navigation }: RootScreenProps<'settingsVoi
           onPress={() => {
             openSystemVoiceSettings();
           }}
-        />
-
-        <SectionHeader title={t('tts.reading')} />
-        <View style={styles.steppers}>
-          <Stepper
-            label={t('tts.rate')}
-            value={rate}
-            min={0.5}
-            max={3}
-            step={0.1}
-            format={(value) => `${value.toFixed(1)}×`}
-            onChange={(value) => setSetting('ttsRate', value)}
-          />
-          <Stepper
-            label={t('tts.pitch')}
-            value={pitch}
-            min={0.5}
-            max={2}
-            step={0.1}
-            format={(value) => value.toFixed(1)}
-            onChange={(value) => setSetting('ttsPitch', value)}
-          />
-          <Stepper
-            label={t('tts.paragraphPause')}
-            value={pauseMs}
-            min={0}
-            max={2000}
-            step={50}
-            format={(value) => `${(value / 1000).toFixed(2)} s`}
-            onChange={(value) => setSetting('ttsPauseMs', value)}
-          />
-        </View>
-        <SwitchItem
-          icon="skip-next-outline"
-          title={t('tts.autoNext')}
-          subtitle={t('tts.autoNextHint')}
-          value={autoNext}
-          onValueChange={(value) => setSetting('ttsAutoNext', value)}
         />
       </ScrollView>
 

@@ -28,7 +28,7 @@ const config: ExpoConfig = {
     package: 'com.redcodesnoo.lnbook',
     versionCode: toVersionCode(version),
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#3C47A8',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',

@@ -35,7 +35,6 @@ import { VoiceSettingsScreen } from '../features/tts/VoiceSettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
 import type { RootStackParamList } from './navigation';
-import { PlaceholderScreen } from './screens/PlaceholderScreen';
 import { TabNavigator } from './TabNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,7 +83,6 @@ export function RootNavigator() {
       <Stack.Screen name="novelStats" component={NovelStatsScreen} />
       <Stack.Screen name="quotes" component={QuotesScreen} />
       <Stack.Screen name="licenses" component={LicensesScreen} />
-      <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );
 }

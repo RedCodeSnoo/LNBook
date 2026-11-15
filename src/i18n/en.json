@@ -8,8 +8,6 @@
     "back": "Back",
     "close": "Close",
     "search": "Search",
-    "comingSoon": "Coming soon",
-    "comingSoonHint": "This part arrives in a future version.",
     "retry": "Retry"
   },
   "tabs": {
@@ -927,7 +925,7 @@
     "period": {
       "7d": "7 days",
       "30d": "30 days",
-      "12m": "12 months",
+      "12m": "Year",
       "all": "All"
     },
     "periodTotal": "{{time}} over the period",

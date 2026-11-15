@@ -28,6 +28,9 @@ appId: com.redcodesnoo.lnbook
 - back
 - tapOn: 'Back'
 - tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Advanced'
+    direction: DOWN
 - tapOn: 'Advanced'
 - assertVisible: 'Clear the cookies'
 - assertVisible: 'Export the error log'
