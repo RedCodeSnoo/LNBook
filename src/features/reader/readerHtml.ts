@@ -55,6 +55,10 @@ export interface ReaderConfig {
   /** Place to show and highlight for 2 seconds (opening a quote or a search result). */
   flash: Anchor | null;
   quotes: { id: number; a: Anchor }[];
+  /** Same text in the other language, block by block (original of a translation). */
+  other?: string[] | null;
+  /** Show the other version under every paragraph. */
+  bilingual?: boolean;
 }
 
 export interface ReaderDocumentInput {
@@ -180,7 +184,8 @@ h1.ln-title{font-size:1.45em;line-height:1.25;margin:0 0 1.2em;text-align:left;f
 #content pre{white-space:pre-wrap;font-size:0.9em;}
 #content ul,#content ol{padding-left:1.4em;}
 #content li{text-indent:0;}
-#content .ln-original{opacity:0.72;font-size:0.88em;}
+#content .ln-original{display:block;opacity:0.72;font-size:0.88em;margin:calc(var(--ps) * -0.6) 0 var(--ps);
+  padding-left:0.7em;border-left:2px solid var(--rule);text-indent:0;}
 ::selection{background:var(--spoken);}
 ::highlight(search){background-color:var(--search);}
 ::highlight(search-current){background-color:var(--search-current);}

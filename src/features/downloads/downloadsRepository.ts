@@ -165,25 +165,31 @@ export function failDownload(db: AppDatabase, id: number, error: string): boolea
 
 /** Tasks interrupted when the app was closed go back to the queue. */
 export function recoverInterruptedDownloads(db: AppDatabase): void {
-  db.update(downloads).set({ status: 'queued' }).where(eq(downloads.status, 'running')).run();
+  db.update(downloads)
+    .set({ status: 'queued' })
+    .where(and(eq(downloads.kind, 'download'), eq(downloads.status, 'running')))
+    .run();
 }
 
 export function pauseDownloads(db: AppDatabase): void {
   db.update(downloads)
     .set({ status: 'paused' })
-    .where(inArray(downloads.status, ['queued', 'running']))
+    .where(and(eq(downloads.kind, 'download'), inArray(downloads.status, ['queued', 'running'])))
     .run();
 }
 
 export function resumeDownloads(db: AppDatabase): void {
-  db.update(downloads).set({ status: 'queued' }).where(eq(downloads.status, 'paused')).run();
+  db.update(downloads)
+    .set({ status: 'queued' })
+    .where(and(eq(downloads.kind, 'download'), eq(downloads.status, 'paused')))
+    .run();
 }
 
 /** Failed tasks get their attempts back and return to the queue. */
 export function retryFailedDownloads(db: AppDatabase): void {
   db.update(downloads)
     .set({ status: 'queued', attempts: 0, error: null })
-    .where(eq(downloads.status, 'failed'))
+    .where(and(eq(downloads.kind, 'download'), eq(downloads.status, 'failed')))
     .run();
 }
 

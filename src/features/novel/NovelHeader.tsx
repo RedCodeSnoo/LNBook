@@ -18,8 +18,21 @@ export interface HeaderAction {
   onPress: () => void;
 }
 
+export interface HeaderLanguage {
+  /** Language code; null = original language unknown. */
+  code: string | null;
+  original: boolean;
+  /** Translated chapters, for a translation. */
+  count: number;
+}
+
 export function NovelHeader({
   novel,
+  languages,
+  activeLang,
+  onPickLanguage,
+  onLanguageOptions,
+  onAddLanguage,
   chapterCount,
   readCount,
   resume,
@@ -28,6 +41,13 @@ export function NovelHeader({
   onOpenStats,
 }: {
   novel: Novel;
+  /** Original language first, then every language with translated chapters. */
+  languages: HeaderLanguage[];
+  /** Language the novel is read in (null = original). */
+  activeLang: string | null;
+  onPickLanguage: (code: string | null) => void;
+  onLanguageOptions: (code: string) => void;
+  onAddLanguage: () => void;
   chapterCount: number;
   readCount: number;
   resume: { chapter: Chapter; started: boolean } | null;
@@ -39,7 +59,6 @@ export function NovelHeader({
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
-  const language = languageInfo(novel.originalLang);
   const genres = (novel.genres ?? '')
     .split(',')
     .map((genre) => genre.trim())
@@ -52,13 +71,51 @@ export function NovelHeader({
           <Cover path={novel.coverPath} title={novel.title} radius={RADIUS.md} />
         </View>
         <View style={styles.info}>
-          {language ? (
-            <View style={styles.flags} accessibilityLabel={t('novel.languages')}>
-              <View style={[styles.flag, { borderColor: colors.primary }]}>
-                <AppText accessibilityLabel={language.name}>{language.flag}</AppText>
-              </View>
-            </View>
-          ) : null}
+          <View style={styles.flags} accessibilityLabel={t('novel.languages')}>
+            {languages.map((item) => {
+              const info = languageInfo(item.code);
+              const active = item.original ? activeLang === null : activeLang === item.code;
+              const partial = !item.original && item.count < chapterCount;
+              return (
+                <Pressable
+                  key={item.original ? 'original' : item.code}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={
+                    item.original
+                      ? t('translation.flagOriginal', { language: info?.name ?? '?' })
+                      : t('translation.flagTranslated', {
+                          language: info?.name ?? '?',
+                          done: item.count,
+                          total: chapterCount,
+                        })
+                  }
+                  onPress={() => onPickLanguage(item.original ? null : item.code)}
+                  onLongPress={
+                    item.original || !item.code
+                      ? undefined
+                      : () => onLanguageOptions(item.code as string)
+                  }
+                  style={[styles.flag, { borderColor: active ? colors.primary : 'transparent' }]}
+                >
+                  <AppText>{info?.flag ?? '🏳️'}</AppText>
+                  {partial ? (
+                    <AppText variant="caption" secondary>
+                      {`${item.count} / ${chapterCount}`}
+                    </AppText>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('translation.addLanguage')}
+              onPress={onAddLanguage}
+              style={[styles.flag, styles.addFlag, { borderColor: colors.border }]}
+            >
+              <Icon name="plus" size={16} color={colors.textSecondary} />
+            </Pressable>
+          </View>
           <AppText variant="headline" numberOfLines={4} selectable>
             {novel.title}
           </AppText>
@@ -203,8 +260,17 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', gap: SPACING.lg },
   cover: { width: 116 },
   info: { flex: 1, gap: SPACING.xs, justifyContent: 'center' },
-  flags: { flexDirection: 'row', gap: SPACING.xs },
-  flag: { borderWidth: 2, borderRadius: RADIUS.sm, paddingHorizontal: 4 },
+  flags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: SPACING.xs },
+  flag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 32,
+    borderWidth: 2,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 6,
+  },
+  addFlag: { borderWidth: 1, minWidth: 32, justifyContent: 'center' },
   source: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   genres: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
   genre: { paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: RADIUS.pill },

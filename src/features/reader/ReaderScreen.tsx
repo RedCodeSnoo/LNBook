@@ -20,6 +20,8 @@ import { formatPercent, formatTime } from '../../services/format';
 import {
   AppBar,
   AppText,
+  Button,
+  Dialog,
   EmptyState,
   Icon,
   IconButton,
@@ -34,12 +36,29 @@ import { FONTS, SPACING } from '../../theme/typography';
 import { setChapterFavorite } from '../novel/novelRepository';
 import { QuoteEditorSheet, type QuoteDraft } from '../quotes/QuoteEditorSheet';
 import { listChapterQuoteAnchors, listQuotes } from '../quotes/quotesRepository';
-import { useSetting } from '../settings/settingsStore';
+import { setSetting, useSetting } from '../settings/settingsStore';
 import { useReadingSession } from '../stats/useReadingSession';
 import { TtsBar } from '../tts/TtsBar';
 import { readAloudFromPlace, startReadingAloud, stopReadingAloud, useTts } from '../tts/ttsService';
+import { defaultTargetLang, languageInfo } from '../translation/languages';
+import {
+  activeTranslationLang,
+  getTranslation,
+  readDisplayedChapter,
+  setReadingLang,
+} from '../translation/translationRepository';
+import { toTranslationError, type TranslationError } from '../translation/translationRunner';
+import {
+  downloadModel,
+  missingModels,
+  switchToOnDeviceEngine,
+  translateAhead,
+  translateNow,
+  translateText,
+} from '../translation/translationService';
 import { SourceErrorView } from '../browse/SourceBits';
 import { preloadChapter, sourcePageUrl, useChapterFetch } from '../browse/useSourceNovel';
+import { parseChapterBlocks, serializeNodes } from './blocks';
 import { BookSearchSheet } from './BookSearchSheet';
 import { ChapterDrawer } from './ChapterDrawer';
 import {
@@ -53,7 +72,6 @@ import {
   listReplacementRules,
   loadReaderContext,
   prepareChapterHtml,
-  readChapterHtml,
   saveReadingPosition,
   touchLastRead,
 } from './readerRepository';
@@ -83,7 +101,7 @@ type RuntimeMessage =
 
 export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   const { chapterId, anchor: anchorParam } = route.params;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const appTheme = useTheme();
   const safeInsets = useSafeAreaInsets();
   const webView = useRef<WebView<NoExtraProps>>(null);
@@ -112,8 +130,15 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   /** Number of chapters that finished loading in the page. */
   const [readyCount, setReadyCount] = useState(0);
 
+  // Language the novel is read in when it is not its original language.
+  const wantedLang = novel ? activeTranslationLang(novel) : null;
   // Language displayed (null = original): quotes belong to one version of the text.
-  const lang = novel?.readingLang ?? null;
+  const lang = useMemo(
+    () => (wantedLang && getTranslation(getDb(), chapterId, wantedLang) ? wantedLang : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chapterId, wantedLang, contentVersion],
+  );
+  const bilingual = useSetting('bilingualReading');
   const chapterQuotes = useQuery(
     () => listChapterQuoteAnchors(getDb(), chapterId, lang),
     ['quotes'],
@@ -157,18 +182,29 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
     if (!current) {
       return null;
     }
-    const stored = readChapterHtml(deviceFiles, current.chapter);
+    const stored = readDisplayedChapter(getDb(), deviceFiles, current.novel, current.chapter);
     if (stored === null) {
       return null;
     }
     const cssPath = novelCssFile(current.novel.id);
     const flash = parseAnchor(anchorParam);
+    const html = prepareChapterHtml(stored.html, rules);
+    // The other version of each paragraph, when both have the same paragraphs.
+    let other: string[] | null = null;
+    if (stored.otherHtml !== null) {
+      const mine = parseChapterBlocks(html).blocks.length;
+      const theirs = parseChapterBlocks(prepareChapterHtml(stored.otherHtml, rules)).blocks;
+      other = theirs.length === mine ? theirs.map((block) => serializeNodes(block.children)) : null;
+    }
     return {
-      key: `${chapterId}:${contentVersion}:${anchorParam ?? ''}`,
+      key: `${chapterId}:${contentVersion}:${anchorParam ?? ''}:${stored.lang ?? ''}`,
       baseUrl: `${deviceFiles.uri(novelDir(current.novel.id))}/`,
+      title: stored.title,
+      translated: stored.lang !== null,
+      hasOther: other !== null,
       html: buildReaderDocument({
-        title: current.chapter.title,
-        html: prepareChapterHtml(stored, rules),
+        title: stored.title,
+        html,
         settings,
         insets,
         config: {
@@ -176,10 +212,12 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           progress: current.chapter.progress,
           flash,
           quotes: chapterQuotes,
+          other,
+          bilingual,
         },
         endLabel: current.next ? t('reader.nextChapter') : t('reader.lastChapter'),
         endTitle: current.next ? current.next.title : t('reader.lastChapterHint'),
-        lang: current.novel.readingLang ?? current.novel.originalLang,
+        lang: stored.lang ?? current.novel.originalLang,
         fontsUri: FONTS_URI,
         fontUri: (path) => deviceFiles.uri(path),
         extraCss: deviceFiles.exists(cssPath) ? deviceFiles.readText(cssPath) : undefined,
@@ -187,7 +225,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
     };
     // Settings, insets and language are only read here: later changes are applied live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapterId, contentVersion, anchorParam, rules]);
+  }, [chapterId, contentVersion, anchorParam, rules, wantedLang]);
 
   // State reported by the page: it starts again from scratch with every loaded chapter.
   const documentKey = document?.key ?? '';
@@ -219,6 +257,80 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       send({ name: 'quotes', list: chapterQuotes });
     }
   }, [chapterQuotes, send]);
+
+  // The other version appears or disappears under every paragraph without reloading.
+  useEffect(() => {
+    if (ready.current) {
+      send({ name: 'bilingual', on: bilingual });
+    }
+  }, [bilingual, send]);
+
+  // ------------------------------------------------------------------ translation
+
+  const hasDocument = document !== null;
+  const isTranslated = document?.translated ?? false;
+  const needsTranslation = wantedLang !== null && hasDocument && !isTranslated;
+  const translationKey = `${chapterId}:${wantedLang ?? ''}`;
+  const [attempt, setAttempt] = useState(0);
+  const [failure, setFailure] = useState<{ key: string; error: TranslationError } | null>(null);
+  const [modelBusy, setModelBusy] = useState(false);
+  const translationError = failure && failure.key === translationKey ? failure.error : null;
+
+  // The chapter is translated when it is opened, then the following ones in advance.
+  useEffect(() => {
+    if (!needsTranslation || wantedLang === null) {
+      return undefined;
+    }
+    let cancelled = false;
+    translateNow(chapterId, wantedLang)
+      .then(() => {
+        if (!cancelled) {
+          setFailure(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setFailure({ key: `${chapterId}:${wantedLang}`, error: toTranslationError(error) });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsTranslation, wantedLang, chapterId, attempt]);
+
+  useEffect(() => {
+    if (isTranslated && wantedLang !== null && novelId !== null) {
+      translateAhead(novelId, chapterId, wantedLang);
+    }
+  }, [isTranslated, wantedLang, novelId, chapterId]);
+
+  const retryTranslation = useCallback(() => {
+    setFailure(null);
+    setAttempt((value) => value + 1);
+  }, []);
+
+  const originalLang = novel?.originalLang ?? null;
+  const fetchModels = useCallback(() => {
+    if (!originalLang || wantedLang === null) {
+      return;
+    }
+    setModelBusy(true);
+    void missingModels(originalLang, wantedLang)
+      .then(async (codes) => {
+        for (const code of codes) {
+          await downloadModel(code);
+        }
+        retryTranslation();
+      })
+      .catch(() => showToast(t('translation.modelFailed')))
+      .finally(() => setModelBusy(false));
+  }, [originalLang, wantedLang, retryTranslation, t]);
+
+  const [selectionTranslation, setSelectionTranslation] = useState<{
+    source: string;
+    result: string | null;
+  } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // ------------------------------------------------------------------ reading time
 
@@ -451,8 +563,20 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
       { key: 'share', label: t('reader.share') },
       { key: 'searchBook', label: t('reader.searchBook') },
       { key: 'speak', label: t('tts.fromHere') },
+      { key: 'translate', label: t('translation.translateSelection') },
+      { key: 'glossary', label: t('translation.addToGlossary') },
+      ...(document?.hasOther
+        ? [
+            {
+              key: 'other',
+              label: isTranslated
+                ? t('translation.showOriginal')
+                : t('translation.showTranslation'),
+            },
+          ]
+        : []),
     ],
-    [t],
+    [t, document?.hasOther, isTranslated],
   );
 
   const onMenuSelection = useCallback(
@@ -493,11 +617,56 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
             void startReadingAloud(chapterId, { kind: 'place', b: anchor.b, o: anchor.o });
           }
           break;
+        case 'translate': {
+          if (!novel) {
+            break;
+          }
+          // A translated text goes back to the original language, the original to the other one.
+          const from = lang ?? novel.originalLang ?? null;
+          const to = lang
+            ? novel.originalLang
+            : (wantedLang ?? defaultTargetLang(from, i18n.language));
+          if (!from || !to) {
+            showToast(t('translation.error.language'));
+            break;
+          }
+          const source = text.slice(0, 2000);
+          setSelectionTranslation({ source, result: null });
+          translateText(novel, source, from, to)
+            .then((result) => setSelectionTranslation({ source, result }))
+            .catch((error: unknown) => {
+              setSelectionTranslation(null);
+              showToast(t(`translation.error.${toTranslationError(error).kind}`));
+            });
+          break;
+        }
+        case 'glossary':
+          if (novelId !== null) {
+            navigation.navigate('glossary', { novelId, term: text.slice(0, 80) });
+          }
+          break;
+        case 'other':
+          if (anchor) {
+            send({ name: 'other', b: anchor.b });
+          }
+          break;
         default:
           break;
       }
     },
-    [send, t, novelId, chapterId, lang, ttsActive, ttsChapterId],
+    [
+      send,
+      t,
+      i18n.language,
+      navigation,
+      novel,
+      novelId,
+      chapterId,
+      lang,
+      wantedLang,
+      ttsActive,
+      ttsChapterId,
+    ],
   );
 
   // ------------------------------------------------------------------ search
@@ -792,7 +961,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
           >
             <AppBar
               title={novel.title}
-              subtitle={chapter.title}
+              subtitle={document?.title ?? chapter.title}
               onBack={navigation.goBack}
               actions={
                 <>
@@ -867,6 +1036,26 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
                         onPress: () =>
                           navigation.navigate('replacements', { novelId: novel.id, chapterId }),
                       },
+                      ...(document?.hasOther
+                        ? [
+                            {
+                              label: bilingual
+                                ? t('translation.bilingualOff')
+                                : t('translation.bilingualOn'),
+                              icon: 'translate' as const,
+                              onPress: () => setSetting('bilingualReading', !bilingual),
+                            },
+                          ]
+                        : []),
+                      ...(isTranslated
+                        ? [
+                            {
+                              label: t('translation.report'),
+                              icon: 'alert-circle-outline' as const,
+                              onPress: () => setReportOpen(true),
+                            },
+                          ]
+                        : []),
                       ...(document && settings.mode === 'scroll'
                         ? [
                             {
@@ -969,6 +1158,7 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
         novelId={novel.id}
         novelTitle={novel.title}
         currentChapterId={chapterId}
+        lang={wantedLang}
         onSelect={(target) =>
           target.id === chapterId ? setPanel('none') : flushThen(() => openChapter(target))
         }
@@ -985,7 +1175,130 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
         novelId={novel.id}
         initialQuery={bookQuery}
         rules={rules}
+        lang={wantedLang}
         onOpen={openSearchResult}
+      />
+
+      {needsTranslation && wantedLang !== null && !searching ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.notice, { top: safeInsets.top + (barsVisible ? 64 : SPACING.sm) }]}
+        >
+          <View
+            accessibilityLiveRegion="polite"
+            style={[styles.noticeCard, { backgroundColor: appTheme.colors.surface }]}
+          >
+            <AppText variant="label">
+              {translationError
+                ? t(`translation.error.${translationError.kind}`)
+                : modelBusy
+                  ? t('translation.modelDownloading')
+                  : t('translation.translating', {
+                      language: languageInfo(wantedLang)?.name ?? wantedLang,
+                    })}
+            </AppText>
+            {translationError && !modelBusy ? (
+              <View style={styles.noticeActions}>
+                {translationError.kind === 'modelMissing' ? (
+                  <Button
+                    compact
+                    variant="tonal"
+                    icon="download-outline"
+                    label={t('translation.downloadModel')}
+                    onPress={fetchModels}
+                  />
+                ) : translationError.engine === 'deepl' ? (
+                  <Button
+                    compact
+                    variant="tonal"
+                    label={t('translation.useOnDevice')}
+                    onPress={() => {
+                      switchToOnDeviceEngine(novel.id);
+                      retryTranslation();
+                    }}
+                  />
+                ) : (
+                  <Button
+                    compact
+                    variant="tonal"
+                    icon="refresh"
+                    label={t('common.retry')}
+                    onPress={retryTranslation}
+                  />
+                )}
+                <Button
+                  compact
+                  variant="text"
+                  label={t('translation.readOriginal')}
+                  onPress={() => {
+                    setReadingLang(getDb(), novel.id, null);
+                    invalidate('novel', 'library');
+                  }}
+                />
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      <Dialog
+        visible={selectionTranslation !== null}
+        title={t('translation.translateSelection')}
+        onClose={() => setSelectionTranslation(null)}
+        actions={[
+          ...(selectionTranslation?.result
+            ? [
+                {
+                  label: t('reader.copy'),
+                  onPress: () => {
+                    void Clipboard.setStringAsync(selectionTranslation.result ?? '');
+                    showToast(t('reader.copied'));
+                  },
+                },
+              ]
+            : []),
+          { label: t('common.close'), onPress: () => setSelectionTranslation(null) },
+        ]}
+      >
+        <View style={styles.translation}>
+          <AppText variant="label" secondary>
+            {selectionTranslation?.source ?? ''}
+          </AppText>
+          {selectionTranslation?.result === null ? (
+            <Skeleton height={18} width="80%" />
+          ) : (
+            <AppText selectable>{selectionTranslation?.result ?? ''}</AppText>
+          )}
+        </View>
+      </Dialog>
+
+      <Dialog
+        visible={reportOpen}
+        title={t('translation.report')}
+        message={t('translation.reportMessage')}
+        onClose={() => setReportOpen(false)}
+        actions={[
+          { label: t('common.cancel'), onPress: () => setReportOpen(false) },
+          {
+            label: t('translation.glossary'),
+            onPress: () => {
+              setReportOpen(false);
+              navigation.navigate('glossary', { novelId: novel.id });
+            },
+          },
+          {
+            label: t('translation.retranslate'),
+            onPress: () => {
+              setReportOpen(false);
+              if (wantedLang !== null) {
+                showToast(t('translation.retranslating'));
+                translateNow(chapterId, wantedLang, true).catch((error: unknown) =>
+                  showToast(t(`translation.error.${toTranslationError(error).kind}`)),
+                );
+              }
+            },
+          },
+        ]}
       />
     </View>
   );
@@ -1039,6 +1352,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.xs,
   },
+  notice: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  noticeCard: {
+    maxWidth: 420,
+    marginHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: 16,
+    elevation: 4,
+    gap: SPACING.xs,
+  },
+  noticeActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
+  translation: { gap: SPACING.md },
   slider: { flex: 1, height: 44 },
   percent: { minWidth: 44 },
   searchInput: { flex: 1, minHeight: 44, fontFamily: FONTS.regular, fontSize: 16 },

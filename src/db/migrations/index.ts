@@ -1,4 +1,5 @@
 import { migration0001 } from './0001_initial_schema';
+import { migration0002 } from './0002_translation_titles';
 import type { Migration, MigrationExecutor } from './types';
 
 export type { Migration, MigrationExecutor } from './types';
@@ -7,7 +8,7 @@ export type { Migration, MigrationExecutor } from './types';
  * Every migration, in order. To change the schema: edit schema.ts, run `npm run db:generate`
  * to get the SQL, then add a new file here. Released migrations are never edited.
  */
-export const migrations: Migration[] = [migration0001];
+export const migrations: Migration[] = [migration0001, migration0002];
 
 export const LATEST_SCHEMA_VERSION = migrations[migrations.length - 1].version;
 

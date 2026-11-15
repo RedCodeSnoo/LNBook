@@ -130,6 +130,8 @@ export const chapterTranslations = sqliteTable(
     filePath: text('file_path').notNull(),
     engine: text('engine').$type<TranslationEngine>().notNull(),
     createdAt: integer('created_at').notNull(),
+    /** Translated title of the chapter. */
+    title: text('title'),
   },
   (table) => [primaryKey({ columns: [table.chapterId, table.lang] })],
 );

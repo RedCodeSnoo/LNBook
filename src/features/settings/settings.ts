@@ -1,5 +1,6 @@
 import { DEFAULT_READER_SETTINGS, type ReaderSettings } from '../reader/readerSettings';
 import { DEFAULT_USER_AGENT } from '../../plugins/libs/fetch';
+import type { TranslationEngine } from '../../db/schema';
 import type { AutoBackupFrequency } from '../backup/backupFile';
 import type { AccentSetting, AppThemeSetting } from '../../theme/palette';
 
@@ -68,6 +69,14 @@ export interface AppSettings {
   /** Go on with the next chapter when one is finished. */
   ttsAutoNext: boolean;
 
+  // Translation
+  /** Engine used unless a novel chooses another one. */
+  translationEngine: TranslationEngine;
+  /** Chapters translated in advance after the one being read. */
+  translateAhead: number;
+  /** Show the other version of each paragraph under it, in smaller text. */
+  bilingualReading: boolean;
+
   // App updates
   /** Look for a new version of the app automatically (at most every six hours). */
   checkAppUpdates: boolean;
@@ -118,6 +127,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ttsPitch: 1,
   ttsPauseMs: 350,
   ttsAutoNext: true,
+
+  translationEngine: 'mlkit',
+  translateAhead: 3,
+  bilingualReading: false,
 
   checkAppUpdates: true,
 

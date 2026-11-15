@@ -9,6 +9,7 @@ import { checkAppUpdateAtLaunch } from '../features/appUpdate/appUpdateService';
 import { runAutoBackupIfDue } from '../features/backup/backupService';
 import { resumeDownloadsAtLaunch } from '../features/downloads/downloadService';
 import { ImportHost } from '../features/library/ImportHost';
+import { resumeTranslationsAtLaunch } from '../features/translation/translationService';
 import { useOpenWithImport } from '../features/library/openWith';
 import { checkAtLaunchIfDue, syncBackgroundCheck } from '../features/updates/updateService';
 import { watchNotificationTaps } from '../services/notifications';
@@ -28,6 +29,7 @@ function ThemedApp() {
   // app updates and automatic backups.
   useEffect(() => {
     resumeDownloadsAtLaunch();
+    resumeTranslationsAtLaunch();
     checkAtLaunchIfDue();
     void syncBackgroundCheck();
     checkAppUpdateAtLaunch();

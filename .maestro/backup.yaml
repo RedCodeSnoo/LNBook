@@ -7,7 +7,12 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'More'
 - tapOn: 'Backup and restore'
 - assertVisible: 'Create a backup'
-- assertVisible: 'Import an LNReader backup'
+- scrollUntilVisible:
+    element: 'Import an LNReader backup'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'Create a backup'
+    direction: UP
 - tapOn: 'Create a backup'
 - assertVisible: 'Downloaded chapters and imported books'
 - tapOn: 'Cancel'

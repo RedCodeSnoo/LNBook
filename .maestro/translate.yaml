@@ -1,0 +1,36 @@
+# Translation: the settings open, a novel is switched to French, and the chapter is
+# translated on the phone once the language model is downloaded (needs the network once).
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Settings'
+- tapOn: 'Translation'
+- assertVisible: 'Offline models'
+- assertVisible: 'DeepL key'
+- tapOn: 'Back'
+- tapOn: 'Back'
+- tapOn: 'Library'
+- tapOn: 'Sample Saga, Ada Author.*'
+- scrollUntilVisible:
+    element: 'Translate'
+    direction: DOWN
+- tapOn: 'Translate'
+- assertVisible: 'Translate the whole novel'
+- tapOn: 'Read in Français'
+- scrollUntilVisible:
+    element: 'Continue.*|Start'
+    direction: UP
+- tapOn: 'Continue.*|Start'
+- extendedWaitUntil:
+    visible: 'The language model is not on the phone'
+    timeout: 30000
+- tapOn: 'Download the language model'
+- extendedWaitUntil:
+    notVisible: 'Downloading the language model…'
+    timeout: 240000
+- extendedWaitUntil:
+    notVisible: 'Translating into Français…'
+    timeout: 120000
+- assertNotVisible: 'The translation failed'
+- assertNotVisible: 'The language model is not on the phone'

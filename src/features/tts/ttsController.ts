@@ -193,6 +193,7 @@ export class TtsController {
     });
 
     let html = this.deps.displayedHtml?.(context.novel, context.chapter) ?? null;
+    const translated = html !== null;
     if (html === null) {
       html = readChapterHtml(files, context.chapter);
     }
@@ -222,7 +223,9 @@ export class TtsController {
     this.blocks = extractBlockTexts(prepared);
     this.sentences = spokenSentences(prepared, this.blocks);
     this.context = context;
-    this.lang = context.novel.readingLang ?? context.novel.originalLang ?? null;
+    // The voice follows the language of the text really read.
+    this.lang =
+      (translated ? context.novel.readingLang : null) ?? context.novel.originalLang ?? null;
     if (this.sentences.length === 0) {
       // Nothing to say (a chapter of images): go on with the next one.
       return this.afterChapter(loadId);

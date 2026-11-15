@@ -88,3 +88,21 @@ export function languageCodeFromName(name: string | null | undefined): string | 
   }
   return PLUGIN_LANGUAGE_NAMES[cleaned] ?? null;
 }
+
+const shortCode = (code: string) => code.toLowerCase().split(/[-_]/)[0];
+
+/** Languages a text in `source` can be translated to. */
+export function targetLanguages(source: string | null | undefined): string[] {
+  const from = source ? shortCode(source) : null;
+  return TRANSLATION_LANGUAGES.filter((code) => code !== from);
+}
+
+/** Language proposed first for a translation: the language of the interface when possible. */
+export function defaultTargetLang(
+  source: string | null | undefined,
+  interfaceLang: string,
+): string | null {
+  const targets = targetLanguages(source);
+  const preferred = shortCode(interfaceLang);
+  return targets.includes(preferred) ? preferred : (targets[0] ?? null);
+}

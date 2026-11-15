@@ -37,7 +37,7 @@ export type ExportOutcome =
 export async function exportNovelToDevice(
   novelId: number,
   target: 'folder' | 'share',
-  range: { from?: number; to?: number } = {},
+  range: { from?: number; to?: number; lang?: string | null } = {},
 ): Promise<ExportOutcome> {
   const novel = getNovel(getDb(), novelId);
   const cover =

@@ -2,6 +2,7 @@
 import type { AppDatabase } from '../../db/client';
 import { buildEpub, type EpubBook } from '../../epub/buildEpub';
 import { novelDir, type FileStore } from '../../services/fileStore';
+import { listTranslationFiles } from '../translation/translationRepository';
 import { getNovel, listChapters, listVolumes } from './novelRepository';
 
 export interface ExportOptions {
@@ -12,6 +13,8 @@ export interface ExportOptions {
   to?: number;
   /** Cover to use when the cover of the novel is not a local file (online novels). */
   cover?: { data: Uint8Array; extension: string } | null;
+  /** Translated version to export (chapters not translated yet are left out). */
+  lang?: string | null;
   now?: Date;
 }
 
@@ -38,7 +41,13 @@ export function novelToEpubBook(
   const from = Math.max(1, options.from ?? 1);
   const to = Math.min(all.length, options.to ?? all.length);
   const wanted = all.slice(from - 1, to);
-  const available = wanted.filter((chapter) => chapter.filePath && files.exists(chapter.filePath));
+  const translated = options.lang ? listTranslationFiles(db, novelId, options.lang) : null;
+  const fileOf = (chapter: { id: number; filePath: string | null }) =>
+    translated ? (translated.get(chapter.id)?.filePath ?? null) : chapter.filePath;
+  const available = wanted.filter((chapter) => {
+    const path = fileOf(chapter);
+    return path !== null && files.exists(path);
+  });
   if (available.length === 0) {
     return null;
   }
@@ -57,9 +66,9 @@ export function novelToEpubBook(
       index = volumeIndex.get(chapter.volumeId) as number;
     }
     return {
-      title: chapter.title,
+      title: translated?.get(chapter.id)?.title ?? chapter.title,
       volumeIndex: index,
-      html: files.readText(chapter.filePath as string),
+      html: files.readText(fileOf(chapter) as string),
     };
   });
 
@@ -82,7 +91,7 @@ export function novelToEpubBook(
       identifier: options.identifier,
       title: novel.title,
       author: novel.author,
-      language: novel.originalLang,
+      language: options.lang ?? novel.originalLang,
       description: novel.description,
       cover,
       volumes,
@@ -117,6 +126,8 @@ export function exportNovelEpub(
   return {
     data: buildEpub(result.book),
     missing: result.missing,
-    fileName: epubFileName(result.book.title),
+    fileName: epubFileName(
+      options.lang ? `${result.book.title} (${options.lang})` : result.book.title,
+    ),
   };
 }

@@ -24,6 +24,8 @@ import { SourcesSettingsScreen } from '../features/settings/SourcesSettingsScree
 import { DownloadSettingsScreen } from '../features/settings/DownloadSettingsScreen';
 import { UpdateSettingsScreen } from '../features/settings/UpdateSettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { GlossaryScreen } from '../features/translation/GlossaryScreen';
+import { TranslationSettingsScreen } from '../features/translation/TranslationSettingsScreen';
 import { VoiceSettingsScreen } from '../features/tts/VoiceSettingsScreen';
 import { useTheme } from '../theme/ThemeProvider';
 import { DURATION } from '../theme/typography';
@@ -70,6 +72,8 @@ export function RootNavigator() {
       <Stack.Screen name="settingsUpdates" component={UpdateSettingsScreen} />
       <Stack.Screen name="backup" component={BackupScreen} />
       <Stack.Screen name="settingsVoice" component={VoiceSettingsScreen} />
+      <Stack.Screen name="settingsTranslation" component={TranslationSettingsScreen} />
+      <Stack.Screen name="glossary" component={GlossaryScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

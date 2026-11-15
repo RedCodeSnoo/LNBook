@@ -127,3 +127,5 @@ export {
   type TtsPlaybackState,
   type TtsVoice,
 } from './tts';
+
+export { nativeTranslate } from './translate';

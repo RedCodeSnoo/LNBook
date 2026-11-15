@@ -132,12 +132,7 @@ jobs:
             node scripts/make-sample-epub.js sample.epub
             scripts/ci-open-sample.sh sample.epub
             scripts/ci-maestro.sh .maestro/import.yaml
-            scripts/ci-maestro.sh .maestro/reader.yaml
-            scripts/ci-maestro.sh .maestro/quotes.yaml
-            scripts/ci-maestro.sh .maestro/browse.yaml
-            scripts/ci-maestro.sh .maestro/downloads.yaml
-            scripts/ci-maestro.sh .maestro/backup.yaml
-            scripts/ci-maestro.sh .maestro/voice.yaml
+            scripts/ci-flows.sh reader quotes browse downloads backup voice translate
 
       - uses: actions/upload-artifact@v7
         if: failure()

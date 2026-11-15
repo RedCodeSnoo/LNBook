@@ -1,17 +1,13 @@
 /** The download queue wired to the device: network, foreground service, interface state. */
 import { create } from 'zustand';
 
-import {
-  backgroundDelay,
-  startDownloadService,
-  stopDownloadService,
-  updateDownloadService,
-} from '../../../modules/lnbook-system';
+import { backgroundDelay } from '../../../modules/lnbook-system';
 import { getDb } from '../../db/client';
 import { invalidate } from '../../db/invalidation';
 import i18n from '../../i18n';
 import { getSource, pluginDeps } from '../../plugins/pluginHost';
 import { deviceFiles } from '../../services/deviceFileStore';
+import { beginWork, endWork, reportWork } from '../../services/foregroundWork';
 import { isNetworkUsable } from '../../services/network';
 import { ensureNotificationPermission } from '../../services/notifications';
 import { getSetting } from '../settings/settingsStore';
@@ -51,7 +47,8 @@ function getRunner(): DownloadRunner {
     now: () => Date.now(),
     onProgress: (progress) => {
       useDownloadState.setState({ progress });
-      updateDownloadService(
+      reportWork(
+        'downloads',
         progress.novelTitle,
         `${progress.done} / ${progress.total} · ${progress.chapterTitle}`,
         progress.done,
@@ -72,7 +69,8 @@ export async function startDownloads(): Promise<void> {
   useDownloadState.setState({ running: true, lastStop: null });
   // The progress notification needs the permission on Android 13+; downloads work without.
   await ensureNotificationPermission();
-  startDownloadService(
+  beginWork(
+    'downloads',
     i18n.t('downloads.channel'),
     i18n.t('downloads.notificationTitle'),
     i18n.t('downloads.notificationStarting'),
@@ -81,7 +79,7 @@ export async function startDownloads(): Promise<void> {
   try {
     reason = await current.run();
   } finally {
-    stopDownloadService();
+    endWork('downloads');
     useDownloadState.setState({ running: false, progress: null, lastStop: reason });
     invalidate('downloads', 'chapters', 'library', 'novel');
   }

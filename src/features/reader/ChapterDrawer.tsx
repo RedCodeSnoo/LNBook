@@ -13,6 +13,7 @@ import { SPACING } from '../../theme/typography';
 import { buildChapterList, NO_CHAPTER_FILTERS, type ChapterListItem } from '../novel/chapterList';
 import { ChapterRow, VolumeHeader } from '../novel/ChapterRow';
 import { listChapters, listVolumes } from '../novel/novelRepository';
+import { listTranslatedChapters } from '../translation/translationRepository';
 
 /** Side panel of the reader with every chapter of the novel (volumes included). */
 export function ChapterDrawer({
@@ -21,6 +22,7 @@ export function ChapterDrawer({
   novelId,
   novelTitle,
   currentChapterId,
+  lang,
   onSelect,
 }: {
   visible: boolean;
@@ -28,6 +30,8 @@ export function ChapterDrawer({
   novelId: number;
   novelTitle: string;
   currentChapterId: number;
+  /** Language of the translation being read, when it is not the original. */
+  lang?: string | null;
   onSelect: (chapter: Chapter) => void;
 }) {
   const { colors } = useTheme();
@@ -52,6 +56,7 @@ export function ChapterDrawer({
             novelId={novelId}
             novelTitle={novelTitle}
             currentChapterId={currentChapterId}
+            lang={lang}
             onSelect={onSelect}
           />
         ) : null}
@@ -65,12 +70,14 @@ function DrawerContent({
   novelId,
   novelTitle,
   currentChapterId,
+  lang,
   onSelect,
 }: {
   onClose: () => void;
   novelId: number;
   novelTitle: string;
   currentChapterId: number;
+  lang?: string | null;
   onSelect: (chapter: Chapter) => void;
 }) {
   const { t } = useTranslation();
@@ -81,6 +88,11 @@ function DrawerContent({
 
   const chapters = useQuery(() => listChapters(getDb(), novelId), ['chapters'], [novelId]);
   const volumes = useQuery(() => listVolumes(getDb(), novelId), ['chapters'], [novelId]);
+  const translated = useQuery(
+    () => (lang ? listTranslatedChapters(getDb(), novelId, lang) : null),
+    ['chapterContent'],
+    [novelId, lang],
+  );
   const items = useMemo(
     () =>
       buildChapterList(chapters, volumes, {
@@ -124,10 +136,12 @@ function DrawerContent({
           chapter={item.chapter}
           selected={item.chapter.id === currentChapterId}
           current={item.chapter.id === currentChapterId}
+          translated={translated?.has(item.chapter.id)}
+          translatedTitle={translated?.get(item.chapter.id)}
           onPress={onSelect}
         />
       ),
-    [currentChapterId, onSelect, toggleVolume],
+    [currentChapterId, onSelect, toggleVolume, translated],
   );
 
   return (

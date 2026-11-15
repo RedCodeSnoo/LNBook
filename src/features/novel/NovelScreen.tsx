@@ -15,6 +15,7 @@ import {
   AppText,
   BottomSheet,
   CheckItem,
+  Chip,
   ConfirmDialog,
   Dialog,
   EmptyState,
@@ -33,6 +34,15 @@ import { SourceErrorView } from '../browse/SourceBits';
 import { queueDownloads } from '../downloads/downloadService';
 import { selectChapters, type DownloadSelection } from '../downloads/downloadsRepository';
 import { deleteChapterDownloads } from '../downloads/storage';
+import { defaultTargetLang, languageInfo } from '../translation/languages';
+import {
+  activeTranslationLang,
+  listTranslatedChapters,
+  listTranslatedLanguages,
+  setReadingLang,
+} from '../translation/translationRepository';
+import { queueTranslations } from '../translation/translationService';
+import { TranslationSheet } from '../translation/TranslationSheet';
 import { setNovelUpdateOptions } from '../updates/updateChecker';
 import { exportNovelToDevice } from './exportToDevice';
 import { setNovelInLibrary } from '../browse/sourceNovels';
@@ -49,7 +59,7 @@ import {
   type ChapterListItem,
 } from './chapterList';
 import { ChapterRow, VolumeHeader } from './ChapterRow';
-import { NovelHeader, type HeaderAction } from './NovelHeader';
+import { NovelHeader, type HeaderAction, type HeaderLanguage } from './NovelHeader';
 import {
   createManualVolume,
   deleteVolume,
@@ -77,11 +87,14 @@ type Prompt =
   | { kind: 'reset' }
   | { kind: 'download' }
   | { kind: 'downloadRange' }
-  | { kind: 'export' };
+  | { kind: 'export' }
+  | { kind: 'translate'; lang: string | null };
+
+const NO_TRANSLATIONS: ReadonlyMap<number, string | null> = new Map();
 
 export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const { novelId } = route.params;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const listRef = useRef<FlashListRef<ChapterListItem>>(null);
 
@@ -100,6 +113,21 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const [prompt, setPrompt] = useState<Prompt>({ kind: 'none' });
   const [input, setInput] = useState('');
   const [keepTimes, setKeepTimes] = useState(true);
+  const [exportLang, setExportLang] = useState<string | null>(null);
+
+  // Translations: languages available, and the chapters of the one being read.
+  const translatedLangs = useQuery(
+    () => listTranslatedLanguages(getDb(), novelId),
+    ['chapters', 'chapterContent', 'novel'],
+    [novelId],
+  );
+  const activeLang = novel ? activeTranslationLang(novel) : null;
+  const shownLang = activeLang ?? translatedLangs[0]?.lang ?? null;
+  const translatedChapters = useQuery(
+    () => (shownLang ? listTranslatedChapters(getDb(), novelId, shownLang) : NO_TRANSLATIONS),
+    ['chapters', 'chapterContent', 'novel'],
+    [novelId, shownLang],
+  );
 
   const items = useMemo(
     () =>
@@ -137,7 +165,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const exportEpub = (target: 'folder' | 'share') => {
     setPrompt({ kind: 'none' });
     showToast(t('novel.exporting'));
-    void exportNovelToDevice(novelId, target).then((outcome) => {
+    void exportNovelToDevice(novelId, target, { lang: exportLang }).then((outcome) => {
       if (outcome.status === 'saved' || outcome.status === 'shared') {
         showToast(
           outcome.missing > 0
@@ -275,6 +303,23 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
     },
   ];
 
+  actions.push({
+    key: 'translate',
+    icon: 'translate',
+    label: t('translation.translate'),
+    active: activeLang !== null,
+    onPress: () => setPrompt({ kind: 'translate', lang: activeLang }),
+  });
+
+  const languages: HeaderLanguage[] = [
+    { code: novel.originalLang, original: true, count: chapters.length },
+    ...translatedLangs.map((item) => ({ code: item.lang, original: false, count: item.count })),
+    // A language chosen for reading appears as soon as it is chosen.
+    ...(activeLang && !translatedLangs.some((item) => item.lang === activeLang)
+      ? [{ code: activeLang, original: false, count: 0 }]
+      : []),
+  ];
+
   const filterCount = Object.values(filters).filter(Boolean).length;
   const single =
     selection.length === 1 ? chapters.find((chapter) => chapter.id === selection[0]) : undefined;
@@ -283,6 +328,14 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
     <View>
       <NovelHeader
         novel={novel}
+        languages={languages}
+        activeLang={activeLang}
+        onPickLanguage={(code) => {
+          setReadingLang(getDb(), novelId, code);
+          invalidate('novel', 'library');
+        }}
+        onLanguageOptions={(code) => setPrompt({ kind: 'translate', lang: code })}
+        onAddLanguage={() => setPrompt({ kind: 'translate', lang: null })}
         chapterCount={chapters.length}
         readCount={readCount}
         resume={resume}
@@ -409,7 +462,20 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                 {
                   label: t('novel.exportEpub'),
                   icon: 'book-arrow-up-outline',
-                  onPress: () => setPrompt({ kind: 'export' }),
+                  onPress: () => {
+                    setExportLang(activeLang);
+                    setPrompt({ kind: 'export' });
+                  },
+                },
+                {
+                  label: t('translation.translate'),
+                  icon: 'translate',
+                  onPress: () => setPrompt({ kind: 'translate', lang: activeLang }),
+                },
+                {
+                  label: t('translation.glossary'),
+                  icon: 'book-alphabet',
+                  onPress: () => navigation.navigate('glossary', { novelId }),
                 },
                 ...(source.online
                   ? [
@@ -520,7 +586,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
       <FlashList
         ref={listRef}
         data={items}
-        extraData={selection}
+        extraData={[selection, translatedChapters, activeLang]}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
         ListHeaderComponent={header}
@@ -540,6 +606,8 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
             <ChapterRow
               chapter={item.chapter}
               selected={selection.includes(item.chapter.id)}
+              translated={translatedChapters.has(item.chapter.id)}
+              translatedTitle={activeLang ? translatedChapters.get(item.chapter.id) : null}
               onPress={selectionMode ? toggleSelected : openChapter}
               onLongPress={onLongPress}
             />
@@ -576,6 +644,24 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
               />
             </>
           ) : null}
+          <IconButton
+            icon="translate"
+            label={t('translation.translateSelected')}
+            onPress={() => {
+              const target = activeLang ?? defaultTargetLang(novel.originalLang, i18n.language);
+              if (!target) {
+                showToast(t('translation.noTarget'));
+                return;
+              }
+              const added = queueTranslations(selection, target);
+              showToast(
+                added > 0
+                  ? t('translation.queued', { count: added })
+                  : t('translation.nothingToTranslate'),
+              );
+              clearSelection();
+            }}
+          />
           <IconButton
             icon="check-all"
             label={t('library.markRead')}
@@ -836,6 +922,22 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         title={t('novel.exportEpub')}
         onClose={closePrompt}
       >
+        {translatedLangs.length > 0 ? (
+          <View style={styles.exportLangs}>
+            {[null, ...translatedLangs.map((item) => item.lang)].map((code) => (
+              <Chip
+                key={code ?? 'original'}
+                label={
+                  code === null
+                    ? t('translation.original')
+                    : `${languageInfo(code)?.flag ?? ''} ${languageInfo(code)?.name ?? code}`.trim()
+                }
+                selected={exportLang === code}
+                onPress={() => setExportLang(code)}
+              />
+            ))}
+          </View>
+        ) : null}
         <ListItem
           icon="folder-outline"
           title={t('novel.exportToFolder')}
@@ -847,6 +949,14 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           onPress={() => exportEpub('share')}
         />
       </BottomSheet>
+      <TranslationSheet
+        novel={novel}
+        chapterCount={chapters.length}
+        initialLang={prompt.kind === 'translate' ? prompt.lang : null}
+        visible={prompt.kind === 'translate'}
+        onClose={closePrompt}
+        onOpenGlossary={() => navigation.navigate('glossary', { novelId })}
+      />
       <ConfirmDialog
         visible={prompt.kind === 'reset'}
         title={t('novel.resetProgress')}
@@ -877,6 +987,13 @@ const styles = StyleSheet.create({
   list: { paddingBottom: SPACING.xxl },
   loading: { padding: SPACING.lg, gap: SPACING.sm },
   dialogCheck: { marginHorizontal: -SPACING.lg },
+  exportLangs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
   toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.sm },
   count: { flex: 1, paddingLeft: SPACING.sm },
   search: { flex: 1, paddingLeft: SPACING.sm },

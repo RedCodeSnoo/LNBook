@@ -10,6 +10,7 @@ import { SPACING } from '../../theme/typography';
 import type { SearchHit } from './blocks';
 import type { Anchor } from './readerHtml';
 import { searchBook, type BookSearchResult } from './readerRepository';
+import { listTranslationFiles } from '../translation/translationRepository';
 import type { ReplacementRule } from './textReplacement';
 
 const LIMIT = 200;
@@ -41,6 +42,8 @@ interface Props {
   novelId: number;
   initialQuery: string;
   rules: ReplacementRule[];
+  /** Language of the translation being read, when it is not the original. */
+  lang?: string | null;
   onOpen: (chapterId: number, anchor: Anchor) => void;
 }
 
@@ -59,7 +62,7 @@ export function BookSearchSheet(props: Props) {
   );
 }
 
-function SearchContent({ novelId, initialQuery, rules, onOpen }: Props) {
+function SearchContent({ novelId, initialQuery, rules, lang, onOpen }: Props) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [query, setQuery] = useState(initialQuery);
@@ -74,7 +77,15 @@ function SearchContent({ novelId, initialQuery, rules, onOpen }: Props) {
     }
     // Reading the whole book takes a moment: let the placeholder appear first.
     const timer = setTimeout(() => {
-      const results = searchBook(getDb(), deviceFiles, novelId, submitted, rules, LIMIT);
+      const results = searchBook(
+        getDb(),
+        deviceFiles,
+        novelId,
+        submitted,
+        rules,
+        LIMIT,
+        lang ? listTranslationFiles(getDb(), novelId, lang) : undefined,
+      );
       setFound({
         query: submitted,
         rows: toRows(results),
@@ -82,7 +93,7 @@ function SearchContent({ novelId, initialQuery, rules, onOpen }: Props) {
       });
     }, 30);
     return () => clearTimeout(timer);
-  }, [submitted, novelId, rules]);
+  }, [submitted, novelId, rules, lang]);
 
   return (
     <>

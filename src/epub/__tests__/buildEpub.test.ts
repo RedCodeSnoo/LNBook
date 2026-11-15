@@ -8,6 +8,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import { createTestDatabase } from '../../db/testing';
 import { importParsedBook } from '../../features/library/importBook';
 import { epubFileName, exportNovelEpub } from '../../features/novel/exportEpub';
+import { saveTranslation } from '../../features/translation/translationRepository';
 import {
   createManualVolume,
   listChapters,
@@ -162,6 +163,27 @@ describe('export of a novel', () => {
       'Chapter 3: Night',
     ]);
     expect(exportNovelEpub(db, files, 999, { identifier: IDENTIFIER })).toBeNull();
+  });
+
+  it('exports a translated version with its titles and language', () => {
+    const { db, files, novelId } = sample();
+    const chapters = listChapters(db, novelId);
+    for (const chapter of chapters.slice(0, 2)) {
+      saveTranslation(db, files, chapter, 'fr', {
+        html: `<p>Texte traduit ${chapter.id}</p>`,
+        title: `Chapitre traduit ${chapter.id}`,
+        engine: 'mlkit',
+      });
+    }
+    const exported = exportNovelEpub(db, files, novelId, { identifier: IDENTIFIER, lang: 'fr' });
+    expect(exported?.missing).toBe(chapters.length - 2);
+    expect(exported?.fileName).toMatch(/\(fr\)\.epub$/);
+    const parsed = parseEpub(exported?.data as Uint8Array);
+    expect(parsed.language).toBe('fr');
+    expect(parsed.chapters.map((chapter) => chapter.title)).toEqual(
+      chapters.slice(0, 2).map((chapter) => `Chapitre traduit ${chapter.id}`),
+    );
+    expect(exportNovelEpub(db, files, novelId, { identifier: IDENTIFIER, lang: 'de' })).toBeNull();
   });
 
   it('builds safe file names', () => {

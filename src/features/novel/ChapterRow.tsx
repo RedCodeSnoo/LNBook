@@ -13,17 +13,30 @@ interface ChapterRowProps {
   chapter: Chapter;
   selected: boolean;
   current?: boolean;
+  /** The chapter exists in the language the novel is read in. */
+  translated?: boolean;
+  /** Title in that language. */
+  translatedTitle?: string | null;
   onPress: (chapter: Chapter) => void;
   onLongPress?: (chapter: Chapter) => void;
 }
 
-function ChapterRowBase({ chapter, selected, current, onPress, onLongPress }: ChapterRowProps) {
+function ChapterRowBase({
+  chapter,
+  selected,
+  current,
+  translated,
+  translatedTitle,
+  onPress,
+  onLongPress,
+}: ChapterRowProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   // A chapter that has been read is greyed out.
   const titleColor = current ? colors.primary : chapter.isRead ? colors.textDisabled : colors.text;
   const metaColor = chapter.isRead ? colors.textDisabled : colors.textSecondary;
   const number = formatChapterNumber(chapter.number ?? chapter.position + 1);
+  const title = translatedTitle || chapter.title;
   const meta = [
     chapter.releaseTime,
     chapter.readMs > 0 ? formatDuration(chapter.readMs, t) : null,
@@ -35,7 +48,8 @@ function ChapterRowBase({ chapter, selected, current, onPress, onLongPress }: Ch
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={[
-        chapter.title,
+        title,
+        translated ? t('translation.translated') : null,
         chapter.isRead ? t('novel.read') : null,
         chapter.isFavorite ? t('novel.favorite') : null,
         ...meta,
@@ -52,7 +66,7 @@ function ChapterRowBase({ chapter, selected, current, onPress, onLongPress }: Ch
       </AppText>
       <View style={styles.texts}>
         <AppText color={titleColor} numberOfLines={2}>
-          {chapter.title}
+          {title}
         </AppText>
         {meta.length > 0 ? (
           <AppText variant="caption" color={metaColor} numberOfLines={1}>
@@ -62,6 +76,7 @@ function ChapterRowBase({ chapter, selected, current, onPress, onLongPress }: Ch
       </View>
       <View style={styles.icons}>
         {chapter.isFavorite ? <Icon name="star" size={16} color={colors.warning} /> : null}
+        {translated ? <Icon name="translate" size={16} color={metaColor} /> : null}
         {chapter.isEdited ? <Icon name="pencil-outline" size={16} color={metaColor} /> : null}
         {chapter.isDownloaded ? (
           <Icon name="check-circle-outline" size={16} color={metaColor} />

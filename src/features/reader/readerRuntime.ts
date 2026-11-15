@@ -590,6 +590,50 @@ export const READER_RUNTIME = String.raw`
     post('autoScroll', { running: true });
   }
 
+  // ---------------------------------------------------------------- other version
+
+  // cfg.other holds, block by block, the same text in the other language (the original
+  // of a translation). It is shown under a paragraph on request, or under all of them.
+  function otherOf(el) {
+    var next = el.nextElementSibling;
+    return next && next.classList.contains('ln-original') ? next : null;
+  }
+
+  function setOther(b, show) {
+    var el = blocks[b];
+    var html = cfg.other && cfg.other[b];
+    if (!el) return false;
+    var shown = otherOf(el);
+    if (show && !shown && html) {
+      var aside = document.createElement('aside');
+      aside.className = 'ln-original';
+      aside.innerHTML = html;
+      el.parentNode.insertBefore(aside, el.nextSibling);
+      return true;
+    }
+    if (!show && shown) {
+      shown.parentNode.removeChild(shown);
+      return true;
+    }
+    return false;
+  }
+
+  function keepPlace(change) {
+    var anchor = topAnchor();
+    change();
+    requestAnimationFrame(function () {
+      if (anchor) goTo(anchor, false);
+      sendProgress();
+    });
+  }
+
+  function setBilingual(on) {
+    cfg.bilingual = !!on;
+    keepPlace(function () {
+      for (var i = 0; i < blocks.length; i++) setOther(i, cfg.bilingual);
+    });
+  }
+
   // ---------------------------------------------------------------- settings
 
   function applySettings(settings) {
@@ -666,6 +710,15 @@ export const READER_RUNTIME = String.raw`
       case 'flush':
         sendPosition();
         break;
+      case 'other':
+        // Shows or hides the other version under one paragraph.
+        if (blocks[command.b]) {
+          keepPlace(function () { setOther(command.b, !otherOf(blocks[command.b])); });
+        }
+        break;
+      case 'bilingual':
+        setBilingual(command.on);
+        break;
       case 'highlight':
         // Sentence being read aloud: { b, start, end } or null.
         if (command.range && blocks[command.range.b]) {
@@ -717,6 +770,9 @@ export const READER_RUNTIME = String.raw`
 
   function start() {
     indexBlocks();
+    if (cfg.bilingual && cfg.other) {
+      for (var i = 0; i < blocks.length; i++) setOther(i, true);
+    }
     setQuotes(cfg.quotes || []);
     restore();
     if (cfg.flash) {

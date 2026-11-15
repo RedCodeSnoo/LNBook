@@ -260,6 +260,8 @@ export function searchBook(
   query: string,
   rules: ReplacementRule[],
   limit = 200,
+  /** Files of the translated chapters, when the book is read in a translation. */
+  translated?: ReadonlyMap<number, { filePath: string; title: string | null }>,
 ): BookSearchResult[] {
   const results: BookSearchResult[] = [];
   if (query.trim() === '') {
@@ -284,7 +286,11 @@ export function searchBook(
     if (remaining <= 0) {
       break;
     }
-    const html = readChapterHtml(files, { filePath });
+    const version = translated?.get(chapter.id);
+    const html = readChapterHtml(files, { filePath: version?.filePath ?? filePath });
+    if (version?.title) {
+      chapter.title = version.title;
+    }
     if (html === null) {
       continue;
     }

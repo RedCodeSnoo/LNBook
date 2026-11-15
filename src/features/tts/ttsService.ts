@@ -8,6 +8,7 @@ import i18n, { deviceLanguages } from '../../i18n';
 import { getSource } from '../../plugins/pluginHost';
 import { deviceFiles } from '../../services/deviceFileStore';
 import { getSetting, useSettingsStore } from '../settings/settingsStore';
+import { readDisplayedChapter } from '../translation/translationRepository';
 import {
   IDLE_SNAPSHOT,
   TtsController,
@@ -41,6 +42,10 @@ const controller = new TtsController({
   files: deviceFiles,
   native: nativeTts,
   getPlugin: getSource,
+  displayedHtml: (novel, chapter) => {
+    const displayed = readDisplayedChapter(getDb(), deviceFiles, novel, chapter);
+    return displayed?.lang ? displayed.html : null;
+  },
   settings: () => ({
     engine: getSetting('ttsEngine'),
     rate: getSetting('ttsRate'),

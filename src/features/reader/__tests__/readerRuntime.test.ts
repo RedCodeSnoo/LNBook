@@ -193,6 +193,38 @@ describe('search and quotes', () => {
   });
 });
 
+describe('other version of the paragraphs', () => {
+  const other = ['Chapitre 1', 'Le renard <i>rapide</i>.', 'Elle dit.', '', 'Le renard revint.'];
+  const config = { anchor: null, progress: 0, flash: null, quotes: [], other };
+
+  it('shows and hides the other version under one paragraph', () => {
+    const { LN, dom, internals } = load(CHAPTER, { config });
+    const content = dom.window.document.getElementById('content') as HTMLElement;
+    expect(content.querySelectorAll('.ln-original')).toHaveLength(0);
+    LN.cmd({ name: 'other', b: 1 });
+    const shown = content.querySelectorAll('.ln-original');
+    expect(shown).toHaveLength(1);
+    expect(shown[0].innerHTML).toBe('Le renard <i>rapide</i>.');
+    expect(shown[0].previousElementSibling).toBe(internals.getBlocks()[1]);
+    // The numbering of the paragraphs does not change: positions stay valid.
+    expect(LN.blockTexts()).toHaveLength(5);
+    LN.cmd({ name: 'other', b: 1 });
+    expect(content.querySelectorAll('.ln-original')).toHaveLength(0);
+  });
+
+  it('shows every paragraph in both versions in bilingual display', () => {
+    const { LN, dom } = load(CHAPTER, { config: { ...config, bilingual: true } });
+    const content = dom.window.document.getElementById('content') as HTMLElement;
+    // The paragraph that is only an image has no other version.
+    expect(content.querySelectorAll('.ln-original')).toHaveLength(4);
+    expect(LN.blockTexts()).toHaveLength(5);
+    LN.cmd({ name: 'bilingual', on: false });
+    expect(content.querySelectorAll('.ln-original')).toHaveLength(0);
+    LN.cmd({ name: 'bilingual', on: true });
+    expect(content.querySelectorAll('.ln-original')).toHaveLength(4);
+  });
+});
+
 describe('reader themes', () => {
   it.each(READER_THEMES)('$id has readable text, links and variables', (theme) => {
     expect(contrastRatio(theme.text, theme.background)).toBeGreaterThanOrEqual(4.5);

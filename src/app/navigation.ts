@@ -40,6 +40,9 @@ export type RootStackParamList = {
   settingsLibrary: undefined;
   backup: undefined;
   settingsVoice: undefined;
+  settingsTranslation: undefined;
+  /** Glossary of a novel; `term` proposes a new entry (text selected in the reader). */
+  glossary: { novelId: number; term?: string };
   /** Screen of a feature that is not available yet. */
   placeholder: { titleKey: string; icon: string };
 };

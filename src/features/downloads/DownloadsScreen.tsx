@@ -24,6 +24,13 @@ import {
   retryFailedDownloads,
   summarizeQueue,
 } from './downloadsRepository';
+import { listTranslationTasks } from '../translation/translationRepository';
+import {
+  cancelAllTranslations,
+  pauseAllTranslations,
+  resumeAllTranslations,
+  useTranslationState,
+} from '../translation/translationService';
 import {
   pauseAllDownloads,
   resumeAllDownloads,
@@ -50,6 +57,10 @@ export function DownloadsScreen({ navigation }: RootScreenProps<'downloads'>) {
   const { colors } = useTheme();
   const rows = useQuery(() => listDownloads(getDb()), ['downloads']);
   const { running, progress, lastStop } = useDownloadState();
+  const translations = useQuery(() => listTranslationTasks(getDb()), ['downloads']);
+  const translating = useTranslationState();
+  const translationsPaused = translations.some((task) => task.status === 'paused');
+  const translationsFailed = translations.filter((task) => task.status === 'failed').length;
   const summary = summarizeQueue(rows);
   const changed = () => invalidate('downloads');
   const blocked =
@@ -126,7 +137,53 @@ export function DownloadsScreen({ navigation }: RootScreenProps<'downloads'>) {
         </View>
       ) : null}
 
-      {rows.length === 0 ? (
+      {translations.length > 0 ? (
+        <View style={[styles.banner, { backgroundColor: colors.surfaceVariant }]}>
+          <AppText variant="bodyStrong" numberOfLines={1}>
+            {t('translation.queueTitle', { count: translations.length })}
+          </AppText>
+          <AppText variant="caption" secondary numberOfLines={2}>
+            {translating.running && translating.progress
+              ? `${translating.progress.novelTitle} – ${translating.progress.done} / ${translating.progress.total} · ${translating.progress.chapterTitle}`
+              : translating.lastStop &&
+                  translating.lastStop !== 'done' &&
+                  translating.lastStop !== 'stopped'
+                ? t(`translation.error.${translating.lastStop}`)
+                : translationsPaused
+                  ? t('downloads.statusPaused')
+                  : translationsFailed > 0
+                    ? t('translation.queueFailed', { count: translationsFailed })
+                    : t('downloads.statusQueued')}
+          </AppText>
+          <View style={styles.bannerButtons}>
+            {translating.running ? (
+              <Button
+                label={t('downloads.pause')}
+                icon="pause"
+                variant="tonal"
+                compact
+                onPress={pauseAllTranslations}
+              />
+            ) : (
+              <Button
+                label={t('downloads.resume')}
+                icon="play"
+                variant="tonal"
+                compact
+                onPress={resumeAllTranslations}
+              />
+            )}
+            <Button
+              label={t('common.cancel')}
+              variant="text"
+              compact
+              onPress={() => cancelAllTranslations()}
+            />
+          </View>
+        </View>
+      ) : null}
+
+      {rows.length === 0 && translations.length > 0 ? null : rows.length === 0 ? (
         <EmptyState
           icon="download-outline"
           title={t('downloads.emptyTitle')}
@@ -198,6 +255,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bannerButton: { alignItems: 'flex-start', paddingTop: SPACING.xs },
+  bannerButtons: { flexDirection: 'row', gap: SPACING.xs, paddingTop: SPACING.xs },
   list: { paddingBottom: SPACING.xl },
   count: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm },
   row: {
