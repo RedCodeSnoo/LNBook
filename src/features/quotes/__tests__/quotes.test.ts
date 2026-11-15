@@ -97,6 +97,24 @@ describe('quotes', () => {
     ]);
   });
 
+  it('keeps every folder listed when no quote is left', () => {
+    const { db, add } = setup();
+    const tragic = createFolder(db, 'Tragic');
+    createFolder(db, 'Later');
+    const id = add(1, 2, 'Soon deleted', [tragic.id]);
+    deleteQuote(db, id);
+    const counts = countByFolder(listQuotes(db), listFolders(db));
+    expect(counts.total).toBe(0);
+    expect(counts.folders.map((entry) => [entry.folder.name, entry.count])).toEqual([
+      ['Tragic', 0],
+      ['Later', 0],
+    ]);
+    // Folders can still be renamed, recoloured and deleted without any quote.
+    updateFolder(db, tragic.id, { name: 'Sad', color: '#112233' });
+    deleteFolder(db, tragic.id);
+    expect(listFolders(db).map((folder) => folder.name)).toEqual(['Later']);
+  });
+
   it('keeps the exact place of the quote', () => {
     const { db, add, list } = setup();
     add(1, 2, 'Find me again');

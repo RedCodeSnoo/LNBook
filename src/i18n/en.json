@@ -545,7 +545,11 @@
       "frame": "Frame"
     },
     "allNovels": "All novels",
-    "emptyGlobal": "Select a passage while reading, then “Favourite quote”."
+    "emptyGlobal": "Select a passage while reading, then “Favourite quote”.",
+    "folderChipHint": "Long press to rename or change the colour",
+    "editFolderOf": "Rename or change the colour of {{name}}",
+    "folderEmpty": "No quote in this folder yet.",
+    "prepareFolders": "You can already create your folders above."
   },
   "sources": {
     "catalog": "Source catalogue",

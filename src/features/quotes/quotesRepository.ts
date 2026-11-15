@@ -310,7 +310,7 @@ export function countByFolder(all: QuoteView[], folders: QuoteFolder[]) {
     total: all.length,
     none,
     folders: folders
-      .map((folder): FolderCount => ({ folder, count: counts.get(folder.id) ?? 0 }))
-      .filter((entry) => entry.count > 0),
+      // Empty folders stay listed: they can be prepared before any quote exists.
+      .map((folder): FolderCount => ({ folder, count: counts.get(folder.id) ?? 0 })),
   };
 }

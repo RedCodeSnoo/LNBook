@@ -21,6 +21,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { RADIUS, SPACING } from '../../theme/typography';
 import i18n from '../../i18n';
 import { useSetting } from '../settings/settingsStore';
+import { FolderDialogs, type FolderPrompt } from './FolderDialogs';
 import { QuoteEditorSheet } from './QuoteEditorSheet';
 import { exportQuotes, quoteLocation } from './quoteFormat';
 import { QuoteImageSheet } from './QuoteImageSheet';
@@ -57,15 +58,22 @@ export function QuoteList({
   const [actionsFor, setActionsFor] = useState<QuoteView | null>(null);
   const [editing, setEditing] = useState<QuoteView | null>(null);
   const [imageOf, setImageOf] = useState<QuoteView | null>(null);
+  const [folderPrompt, setFolderPrompt] = useState<FolderPrompt>({ kind: 'none' });
 
   const all = useQuery(() => listQuotes(getDb(), { novelId, sort }), ['quotes'], [novelId, sort]);
   const folders = useQuery(() => listFolders(getDb()), ['quotes']);
   const counts = useMemo(() => countByFolder(all, folders), [all, folders]);
-  // A folder that lost its last quote of this novel falls back to "All".
+  // A deleted folder falls back to "All"; an empty one stays selected.
   const activeFolder: FolderFilter =
-    typeof folder === 'number' && !counts.folders.some((entry) => entry.folder.id === folder)
+    typeof folder === 'number' && !folders.some((entry) => entry.id === folder)
       ? 'all'
-      : folder;
+      : folder === 'none' && counts.none === 0
+        ? 'all'
+        : folder;
+  const selectedFolder =
+    typeof activeFolder === 'number'
+      ? (folders.find((entry) => entry.id === activeFolder) ?? null)
+      : null;
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return all.filter((quote) => {
@@ -103,16 +111,6 @@ export function QuoteList({
     void Share.share({ message: exportQuotes(shown, format, t) }).catch(() => undefined);
   };
 
-  if (all.length === 0) {
-    return (
-      <EmptyState
-        icon="format-quote-close"
-        title={t('novel.noQuotesTitle')}
-        message={t('novel.noQuotesMessage')}
-      />
-    );
-  }
-
   return (
     <View>
       <ScrollView
@@ -137,97 +135,147 @@ export function QuoteList({
           <Chip
             key={entry.folder.id}
             label={`${entry.folder.name} ${entry.count}`}
+            dotColor={entry.folder.color}
             selected={activeFolder === entry.folder.id}
             onPress={() => setFolder(entry.folder.id)}
+            onLongPress={() => setFolderPrompt({ kind: 'edit', folder: entry.folder })}
+            accessibilityHint={t('quotes.folderChipHint')}
           />
         ))}
         <Chip
-          icon="folder-cog-outline"
-          label={t('quotes.manageFolders')}
-          onPress={() => navigationRef.isReady() && navigationRef.navigate('quoteFolders')}
+          icon="folder-plus-outline"
+          label={t('quotes.newFolder')}
+          onPress={() => setFolderPrompt({ kind: 'edit', folder: null })}
         />
+        {folders.length > 1 ? (
+          <Chip
+            icon="folder-cog-outline"
+            label={t('quotes.manageFolders')}
+            onPress={() => navigationRef.isReady() && navigationRef.navigate('quoteFolders')}
+          />
+        ) : null}
       </ScrollView>
 
-      <View style={styles.toolbar}>
-        {searching ? (
-          <View style={styles.search}>
-            <TextField
-              autoFocus
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t('quotes.search')}
-              accessibilityLabel={t('quotes.search')}
+      {selectedFolder ? (
+        <View style={styles.folderBar}>
+          <View style={[styles.dot, { backgroundColor: selectedFolder.color }]} />
+          <AppText variant="label" numberOfLines={1} style={styles.search}>
+            {selectedFolder.name}
+          </AppText>
+          <IconButton
+            icon="pencil-outline"
+            label={t('quotes.editFolderOf', { name: selectedFolder.name })}
+            onPress={() => setFolderPrompt({ kind: 'edit', folder: selectedFolder })}
+          />
+          <IconButton
+            icon="delete-outline"
+            label={t('categories.delete', { name: selectedFolder.name })}
+            onPress={() => setFolderPrompt({ kind: 'delete', folder: selectedFolder })}
+          />
+        </View>
+      ) : null}
+
+      {all.length === 0 ? (
+        <EmptyState
+          icon="format-quote-close"
+          title={t('novel.noQuotesTitle')}
+          message={
+            showNovel
+              ? `${t('quotes.emptyGlobal')} ${t('quotes.prepareFolders')}`
+              : `${t('novel.noQuotesMessage')} ${t('quotes.prepareFolders')}`
+          }
+        />
+      ) : (
+        <>
+          <View style={styles.toolbar}>
+            {searching ? (
+              <View style={styles.search}>
+                <TextField
+                  autoFocus
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder={t('quotes.search')}
+                  accessibilityLabel={t('quotes.search')}
+                />
+              </View>
+            ) : (
+              <AppText variant="label" secondary style={styles.search}>
+                {t('quotes.count', { count: shown.length })}
+              </AppText>
+            )}
+            <IconButton
+              icon={searching ? 'close' : 'magnify'}
+              label={searching ? t('common.close') : t('quotes.search')}
+              onPress={() => {
+                setSearching(!searching);
+                setSearch('');
+              }}
+            />
+            <IconButton
+              icon={sort === 'book' ? 'book-open-page-variant-outline' : 'clock-outline'}
+              label={sort === 'book' ? t('quotes.sortByDate') : t('quotes.sortByBook')}
+              onPress={() => setSort(sort === 'book' ? 'date' : 'book')}
+            />
+            <IconButton
+              icon="export-variant"
+              label={t('quotes.export')}
+              onPress={() => exportShown('md')}
+              onLongPress={() => exportShown('txt')}
             />
           </View>
-        ) : (
-          <AppText variant="label" secondary style={styles.search}>
-            {t('quotes.count', { count: shown.length })}
-          </AppText>
-        )}
-        <IconButton
-          icon={searching ? 'close' : 'magnify'}
-          label={searching ? t('common.close') : t('quotes.search')}
-          onPress={() => {
-            setSearching(!searching);
-            setSearch('');
-          }}
-        />
-        <IconButton
-          icon={sort === 'book' ? 'book-open-page-variant-outline' : 'clock-outline'}
-          label={sort === 'book' ? t('quotes.sortByDate') : t('quotes.sortByBook')}
-          onPress={() => setSort(sort === 'book' ? 'date' : 'book')}
-        />
-        <IconButton
-          icon="export-variant"
-          label={t('quotes.export')}
-          onPress={() => exportShown('md')}
-          onLongPress={() => exportShown('txt')}
-        />
-      </View>
 
-      {shown.length === 0 ? (
-        <AppText secondary center style={styles.empty}>
-          {t('quotes.noMatch')}
-        </AppText>
-      ) : null}
-      {shown.map((quote) => (
-        <Pressable
-          key={quote.id}
-          accessibilityRole="button"
-          accessibilityHint={t('quotes.openHint')}
-          onPress={() => open(quote)}
-          onLongPress={() => setActionsFor(quote)}
-          android_ripple={{ color: colors.ripple }}
-          style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
-        >
-          <AppText>{quote.text}</AppText>
-          <AppText variant="caption" secondary>
-            {[
-              showNovel ? quote.novelTitle : null,
-              quoteLocation(quote, t),
-              formatDate(quote.createdAt, dateFormat, i18n.language),
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </AppText>
-          {quote.note ? (
-            <AppText variant="label" style={styles.noteText}>
-              {quote.note}
+          {shown.length === 0 ? (
+            <AppText secondary center style={styles.empty}>
+              {selectedFolder && search.trim() === ''
+                ? t('quotes.folderEmpty')
+                : t('quotes.noMatch')}
             </AppText>
           ) : null}
-          {quote.folders.length > 0 ? (
-            <View style={styles.folders}>
-              {quote.folders.map((item) => (
-                <View key={item.id} style={[styles.pill, { borderColor: item.color }]}>
-                  <View style={[styles.dot, { backgroundColor: item.color }]} />
-                  <AppText variant="caption">{item.name}</AppText>
+          {shown.map((quote) => (
+            <Pressable
+              key={quote.id}
+              accessibilityRole="button"
+              accessibilityHint={t('quotes.openHint')}
+              onPress={() => open(quote)}
+              onLongPress={() => setActionsFor(quote)}
+              android_ripple={{ color: colors.ripple }}
+              style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
+            >
+              <AppText>{quote.text}</AppText>
+              <AppText variant="caption" secondary>
+                {[
+                  showNovel ? quote.novelTitle : null,
+                  quoteLocation(quote, t),
+                  formatDate(quote.createdAt, dateFormat, i18n.language),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </AppText>
+              {quote.note ? (
+                <AppText variant="label" style={styles.noteText}>
+                  {quote.note}
+                </AppText>
+              ) : null}
+              {quote.folders.length > 0 ? (
+                <View style={styles.folders}>
+                  {quote.folders.map((item) => (
+                    <View key={item.id} style={[styles.pill, { borderColor: item.color }]}>
+                      <View style={[styles.dot, { backgroundColor: item.color }]} />
+                      <AppText variant="caption">{item.name}</AppText>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          ) : null}
-        </Pressable>
-      ))}
+              ) : null}
+            </Pressable>
+          ))}
+        </>
+      )}
 
+      <FolderDialogs
+        prompt={folderPrompt}
+        folderCount={folders.length}
+        onClose={() => setFolderPrompt({ kind: 'none' })}
+      />
       <BottomSheet visible={actionsFor !== null} onClose={() => setActionsFor(null)}>
         {actionsFor ? (
           <>
@@ -299,6 +347,13 @@ const styles = StyleSheet.create({
     paddingRight: SPACING.xs,
   },
   search: { flex: 1 },
+  folderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingLeft: SPACING.lg,
+    paddingRight: SPACING.xs,
+  },
   empty: { padding: SPACING.xl },
   card: {
     marginHorizontal: SPACING.lg,

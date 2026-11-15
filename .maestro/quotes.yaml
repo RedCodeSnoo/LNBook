@@ -28,3 +28,13 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'History'
 - assertVisible: 'Today'
 - assertVisible: 'Sample Saga'
+# More → Quotes: the folders are always listed, and one can be prepared in advance.
+- tapOn: 'More'
+- tapOn: 'Quotes'
+- assertVisible: 'Tragic 1'
+- tapOn: 'New folder'
+- inputText: 'Later'
+- tapOn: 'Save'
+- assertVisible: 'Later 0'
+- tapOn: 'Later 0'
+- assertVisible: 'No quote in this folder yet.'

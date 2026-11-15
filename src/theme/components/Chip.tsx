@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '../ThemeProvider';
 import { RADIUS, SPACING } from '../typography';
@@ -12,8 +12,13 @@ export function Chip({
   onPress,
   onLongPress,
   icon,
+  dotColor,
+  accessibilityHint,
 }: {
   label: string;
+  /** Small coloured dot before the label (quote folders). */
+  dotColor?: string;
+  accessibilityHint?: string;
   selected?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -25,6 +30,7 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: Boolean(selected) }}
+      accessibilityHint={accessibilityHint}
       onPress={onPress}
       onLongPress={onLongPress}
       style={[
@@ -36,6 +42,7 @@ export function Chip({
       ]}
     >
       {icon ? <Icon name={icon} size={16} color={foreground} /> : null}
+      {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
       <AppText variant="label" color={foreground} numberOfLines={1}>
         {label}
       </AppText>
@@ -53,4 +60,5 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     borderWidth: 1,
   },
+  dot: { width: 10, height: 10, borderRadius: 5 },
 });

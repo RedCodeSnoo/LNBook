@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { RootScreenProps } from '../../app/navigation';
 import { getDb } from '../../db/client';
 import { useQuery } from '../../db/invalidation';
-import { AppBar, Chip, EmptyState, IconButton, Screen } from '../../theme/components';
+import { AppBar, Chip, IconButton, Screen } from '../../theme/components';
 import { SPACING } from '../../theme/typography';
 import { QuoteList } from './QuoteList';
 import { listQuoteNovels } from './quotesRepository';
@@ -31,39 +31,32 @@ export function QuotesScreen({ navigation }: RootScreenProps<'quotes'>) {
           />
         }
       />
-      {novels.length === 0 ? (
-        <EmptyState
-          icon="format-quote-close"
-          title={t('novel.noQuotesTitle')}
-          message={t('quotes.emptyGlobal')}
-        />
-      ) : (
-        <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-          {novels.length > 1 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chips}
-              keyboardShouldPersistTaps="handled"
-            >
+      {/* Always shown, even without any quote: folders can be prepared in advance. */}
+      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+        {novels.length > 1 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Chip
+              label={t('quotes.allNovels')}
+              selected={novelId === null}
+              onPress={() => setChosen(null)}
+            />
+            {novels.map((novel) => (
               <Chip
-                label={t('quotes.allNovels')}
-                selected={novelId === null}
-                onPress={() => setChosen(null)}
+                key={novel.id}
+                label={`${novel.title} ${novel.count}`}
+                selected={novelId === novel.id}
+                onPress={() => setChosen(novel.id)}
               />
-              {novels.map((novel) => (
-                <Chip
-                  key={novel.id}
-                  label={`${novel.title} ${novel.count}`}
-                  selected={novelId === novel.id}
-                  onPress={() => setChosen(novel.id)}
-                />
-              ))}
-            </ScrollView>
-          ) : null}
-          <QuoteList key={novelId ?? 'all'} novelId={novelId ?? undefined} showNovel />
-        </ScrollView>
-      )}
+            ))}
+          </ScrollView>
+        ) : null}
+        <QuoteList key={novelId ?? 'all'} novelId={novelId ?? undefined} showNovel />
+      </ScrollView>
     </Screen>
   );
 }
