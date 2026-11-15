@@ -13,6 +13,8 @@ import i18n, { initI18n } from '../../i18n';
 import { getSource } from '../../plugins/pluginHost';
 import { isNetworkUsable } from '../../services/network';
 import { notifyNewChapters } from '../../services/notifications';
+import { checkAppUpdateIfDue } from '../appUpdate/appUpdateService';
+import { isUpdateCheckDue } from '../appUpdate/releaseCheck';
 import { runAutoBackupIfDue } from '../backup/backupService';
 import { queueDownloads } from '../downloads/downloadService';
 import { readValue, writeValue } from '../settings/settingsRepository';
@@ -106,7 +108,11 @@ TaskManager.defineTask(UPDATE_TASK, async () => {
     if (!useSettingsStore.getState().loaded) {
       initI18n(loadSettings().language);
     }
-    await runUpdateCheck({ background: true });
+    // One background task for every periodic job: each one runs when its own time comes.
+    if (isUpdateCheckDue(getLastCheckAt(), Date.now(), getSetting('updateCheckHours'))) {
+      await runUpdateCheck({ background: true });
+    }
+    await checkAppUpdateIfDue();
     await runAutoBackupIfDue();
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {
@@ -114,9 +120,18 @@ TaskManager.defineTask(UPDATE_TASK, async () => {
   }
 });
 
-/** Applies the "check frequency" setting to the background task. */
+/** Runs the background task as often as the most frequent check needs. */
+export function backgroundIntervalHours(chapterHours: number, appHours: number): number {
+  const chosen = [chapterHours, appHours].filter((hours) => hours > 0);
+  return chosen.length > 0 ? Math.min(...chosen) : 0;
+}
+
+/** Applies the "check frequency" settings (chapters and app) to the background task. */
 export async function syncBackgroundCheck(): Promise<void> {
-  const hours = getSetting('updateCheckHours');
+  const hours = backgroundIntervalHours(
+    getSetting('updateCheckHours'),
+    getSetting('appUpdateHours'),
+  );
   try {
     if (hours > 0) {
       await BackgroundTask.registerTaskAsync(UPDATE_TASK, { minimumInterval: hours * 60 });

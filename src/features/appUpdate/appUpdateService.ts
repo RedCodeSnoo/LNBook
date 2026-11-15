@@ -3,30 +3,40 @@
  * the data, then the Android installer.
  */
 import * as Application from 'expo-application';
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 
 import {
+  addInstallStatusListener,
   canInstallUpdates,
+  clearUpdateDownloads,
   downloadUpdate,
   installUpdate,
   openInstallSettings,
+  type InstallStatus,
 } from '../../../modules/lnbook-system';
 import { getDb } from '../../db/client';
+import i18n from '../../i18n';
+import { notifyAppUpdate } from '../../services/notifications';
 import { writeSafetyBackup } from '../backup/backupService';
 import { readValue, writeValue } from '../settings/settingsRepository';
 import { getSetting } from '../settings/settingsStore';
 import {
   checksumMatches,
   fetchLatestRelease,
+  isFirstLaunchOfVersion,
   isUpdateAvailable,
   isUpdateCheckDue,
   parseChecksumFile,
+  shouldNotifyRelease,
   type AppRelease,
 } from './releaseCheck';
 
 const LAST_CHECK_KEY = 'appUpdateLastCheckAt';
 const RELEASE_KEY = 'appUpdateRelease';
 const IGNORED_KEY = 'appUpdateIgnoredVersion';
+const NOTIFIED_KEY = 'appUpdateNotifiedVersion';
+const LAST_SEEN_VERSION_KEY = 'appUpdateLastSeenVersion';
 
 export type UpdatePhase =
   | 'idle'
@@ -37,7 +47,9 @@ export type UpdatePhase =
   /** Handed to the Android installer. */
   | 'installing';
 
-export type UpdateFailure = 'download' | 'checksum' | 'install';
+export type UpdateFailure = 'download' | 'checksum' | 'install' | 'cancelled';
+
+export type CheckOutcome = 'available' | 'upToDate' | 'failed';
 
 interface AppUpdateState {
   /** Latest release known, when it is newer than the installed version. */
@@ -45,10 +57,16 @@ interface AppUpdateState {
   /** True when `release` was dismissed with "Ignore this version". */
   ignored: boolean;
   checking: boolean;
+  /** Result of the last check made during this launch (null = none yet). */
+  lastOutcome: CheckOutcome | null;
+  lastCheckAt: number | null;
   phase: UpdatePhase;
   received: number;
   total: number;
   failure: UpdateFailure | null;
+  /** What Android said when it refused the installation. */
+  failureDetail: InstallStatus | null;
+  failureMessage: string | null;
   /** Verified file waiting to be installed. */
   filePath: string | null;
 }
@@ -57,10 +75,14 @@ export const useAppUpdate = create<AppUpdateState>(() => ({
   release: null,
   ignored: false,
   checking: false,
+  lastOutcome: null,
+  lastCheckAt: null,
   phase: 'idle',
   received: 0,
   total: 0,
   failure: null,
+  failureDetail: null,
+  failureMessage: null,
   filePath: null,
 }));
 
@@ -80,35 +102,108 @@ function publish(release: AppRelease | null): void {
 /** Shows again the release found by an earlier check (no network needed). */
 export function loadKnownRelease(): void {
   publish(readValue<AppRelease | null>(getDb(), RELEASE_KEY, null));
+  useAppUpdate.setState({ lastCheckAt: readValue<number | null>(getDb(), LAST_CHECK_KEY, null) });
 }
 
-export type CheckOutcome = 'available' | 'upToDate' | 'failed';
+let inFlight: Promise<CheckOutcome> | null = null;
 
-/** Asks GitHub for the latest release. */
-export async function checkForAppUpdate(): Promise<CheckOutcome> {
-  if (useAppUpdate.getState().checking) {
-    return useAppUpdate.getState().release ? 'available' : 'upToDate';
+/** Asks GitHub for the latest release (a check already running is shared, not repeated). */
+export function checkForAppUpdate(): Promise<CheckOutcome> {
+  if (inFlight) {
+    return inFlight;
   }
   useAppUpdate.setState({ checking: true });
-  try {
-    const release = await fetchLatestRelease(fetch);
-    writeValue(getDb(), LAST_CHECK_KEY, Date.now());
-    writeValue(getDb(), RELEASE_KEY, release);
-    publish(release);
-    return useAppUpdate.getState().release ? 'available' : 'upToDate';
-  } catch {
-    return 'failed';
-  } finally {
-    useAppUpdate.setState({ checking: false });
+  inFlight = (async (): Promise<CheckOutcome> => {
+    try {
+      const release = await fetchLatestRelease(fetch);
+      const now = Date.now();
+      writeValue(getDb(), LAST_CHECK_KEY, now);
+      writeValue(getDb(), RELEASE_KEY, release);
+      publish(release);
+      const outcome = useAppUpdate.getState().release ? 'available' : 'upToDate';
+      useAppUpdate.setState({ lastOutcome: outcome, lastCheckAt: now });
+      return outcome;
+    } catch {
+      useAppUpdate.setState({ lastOutcome: 'failed' });
+      return 'failed';
+    } finally {
+      inFlight = null;
+      useAppUpdate.setState({ checking: false });
+    }
+  })();
+  return inFlight;
+}
+
+/** "Check for updates" pressed: a version that was ignored is shown again. */
+export async function checkForAppUpdateByHand(): Promise<CheckOutcome> {
+  const outcome = await checkForAppUpdate();
+  if (outcome === 'available') {
+    stopIgnoringRelease();
+  }
+  return outcome;
+}
+
+/** Notification "Version X available", once per version. */
+async function announce(): Promise<void> {
+  const db = getDb();
+  const release = readValue<AppRelease | null>(db, RELEASE_KEY, null);
+  const ignored = readValue<string | null>(db, IGNORED_KEY, null);
+  const notified = readValue<string | null>(db, NOTIFIED_KEY, null);
+  if (!shouldNotifyRelease(release, installedVersion(), ignored, notified)) {
+    return;
+  }
+  writeValue(db, NOTIFIED_KEY, release.version);
+  await notifyAppUpdate(
+    i18n.t('appUpdate.channel'),
+    i18n.t('appUpdate.available', { version: release.version }),
+    i18n.t('appUpdate.notificationBody'),
+  );
+}
+
+/**
+ * Automatic check, when the chosen interval has passed: at launch, when the app comes
+ * back to the screen and in the background. A new version is announced by notification.
+ */
+export async function checkAppUpdateIfDue(): Promise<void> {
+  const last = readValue<number | null>(getDb(), LAST_CHECK_KEY, null);
+  if (!isUpdateCheckDue(last, Date.now(), getSetting('appUpdateHours'))) {
+    return;
+  }
+  if ((await checkForAppUpdate()) === 'available') {
+    await announce();
   }
 }
 
-/** At launch: at most one automatic check every six hours, unless turned off. */
+let watchingForeground = false;
+
+/**
+ * At launch. The first launch of a new version forgets what the previous version had
+ * found (and its downloaded file), then checks at once.
+ */
 export function checkAppUpdateAtLaunch(): void {
+  const db = getDb();
+  const installed = installedVersion();
+  if (
+    isFirstLaunchOfVersion(readValue<string | null>(db, LAST_SEEN_VERSION_KEY, null), installed)
+  ) {
+    writeValue(db, LAST_SEEN_VERSION_KEY, installed);
+    writeValue(db, LAST_CHECK_KEY, null);
+    try {
+      clearUpdateDownloads();
+    } catch {
+      // Nothing to remove.
+    }
+  }
   loadKnownRelease();
-  const last = readValue<number | null>(getDb(), LAST_CHECK_KEY, null);
-  if (getSetting('checkAppUpdates') && isUpdateCheckDue(last, Date.now())) {
-    void checkForAppUpdate();
+  void checkAppUpdateIfDue();
+  if (!watchingForeground) {
+    watchingForeground = true;
+    // An app left open for days must notice new versions too.
+    AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void checkAppUpdateIfDue();
+      }
+    });
   }
 }
 
@@ -122,17 +217,42 @@ export function stopIgnoringRelease(): void {
   useAppUpdate.setState({ ignored: false });
 }
 
+let statusSubscription: { remove(): void } | null = null;
+
+/** What Android reports about an installation started with a session. */
+function onInstallStatus(status: InstallStatus, message: string | null): void {
+  if (status === 'confirm' || status === 'success') {
+    useAppUpdate.setState({ phase: 'installing' });
+    return;
+  }
+  useAppUpdate.setState({
+    phase: 'idle',
+    failure: status === 'aborted' ? 'cancelled' : 'install',
+    failureDetail: status,
+    failureMessage: message,
+  });
+}
+
 function launchInstaller(path: string): void {
   try {
     if (!canInstallUpdates()) {
       useAppUpdate.setState({ phase: 'needsPermission', filePath: path });
       return;
     }
-    installUpdate(path);
-    useAppUpdate.setState({ phase: 'installing', filePath: path });
   } catch {
     useAppUpdate.setState({ phase: 'idle', failure: 'install' });
+    return;
   }
+  statusSubscription ??= addInstallStatusListener(onInstallStatus);
+  useAppUpdate.setState({ phase: 'installing', filePath: path });
+  installUpdate(path).catch((error: unknown) =>
+    useAppUpdate.setState({
+      phase: 'idle',
+      failure: 'install',
+      failureDetail: 'failure',
+      failureMessage: error instanceof Error ? error.message : null,
+    }),
+  );
 }
 
 /**
@@ -140,6 +260,14 @@ function launchInstaller(path: string): void {
  * the data, then opens the Android installer.
  */
 export async function downloadAndInstall(): Promise<void> {
+  if (['downloading', 'verifying'].includes(useAppUpdate.getState().phase)) {
+    return;
+  }
+  // A release found long ago may have been replaced by a newer one since.
+  const { lastCheckAt } = useAppUpdate.getState();
+  if (lastCheckAt === null || Date.now() - lastCheckAt > 15 * 60 * 1000) {
+    await checkForAppUpdate();
+  }
   const { release, phase } = useAppUpdate.getState();
   if (!release || phase === 'downloading' || phase === 'verifying') {
     return;
@@ -149,6 +277,8 @@ export async function downloadAndInstall(): Promise<void> {
     received: 0,
     total: release.apkSize,
     failure: null,
+    failureDetail: null,
+    failureMessage: null,
     filePath: null,
   });
   let downloaded;
@@ -180,7 +310,12 @@ export async function downloadAndInstall(): Promise<void> {
   }
 
   await new Promise((resolve) => setTimeout(resolve, 50));
-  writeSafetyBackup();
+  // Never blocks the installation: the data stays in place during an update anyway.
+  try {
+    writeSafetyBackup();
+  } catch {
+    // Already logged by the backup.
+  }
   launchInstaller(downloaded.path);
 }
 

@@ -1,12 +1,18 @@
 import {
   checksumMatches,
+  checkStatusKey,
   fetchLatestRelease,
   isUpdateAvailable,
+  isFirstLaunchOfVersion,
   isUpdateCheckDue,
   parseChecksumFile,
   parseRelease,
-  UPDATE_CHECK_INTERVAL_MS,
+  RELEASES_URL,
+  shouldNotifyRelease,
 } from '../releaseCheck';
+import { compareVersions, isNewerVersion } from '../../../services/version';
+
+const HOUR = 60 * 60 * 1000;
 
 /** Shape of the GitHub "latest release" answer (only the fields that matter). */
 const payload = (overrides: Record<string, unknown> = {}) => ({
@@ -66,10 +72,63 @@ describe('GitHub release', () => {
     expect(isUpdateAvailable(null, '0.4.0', null)).toBe(false);
   });
 
-  it('checks at most every six hours', () => {
-    expect(isUpdateCheckDue(null, 0)).toBe(true);
-    expect(isUpdateCheckDue(100, 100 + UPDATE_CHECK_INTERVAL_MS - 1)).toBe(false);
-    expect(isUpdateCheckDue(100, 100 + UPDATE_CHECK_INTERVAL_MS)).toBe(true);
+  it('finds every published release newer than the installed one', () => {
+    // The versions really published: each one must be offered to all the older ones.
+    const published = [
+      '0.1.0',
+      '0.2.0',
+      '0.3.0',
+      '0.4.0',
+      '0.5.0',
+      '0.6.0',
+      '0.7.0',
+      '1.0.0',
+      '1.0.1',
+    ];
+    published.forEach((installed, index) => {
+      for (const candidate of published.slice(index + 1)) {
+        const release = parseRelease(
+          payload({
+            tag_name: `v${candidate}`,
+            assets: [{ name: 'a.apk', browser_download_url: 'https://x/a.apk' }],
+          }),
+        );
+        expect(isUpdateAvailable(release, installed, null)).toBe(true);
+      }
+    });
+    // Dismissing 0.6.0 does not hide 0.7.0.
+    const next = parseRelease(payload({ tag_name: 'v0.7.0' }));
+    expect(isUpdateAvailable(next, '0.5.0', '0.6.0')).toBe(true);
+  });
+
+  it('runs the automatic check at the chosen interval', () => {
+    expect(isUpdateCheckDue(null, 0, 6)).toBe(true);
+    expect(isUpdateCheckDue(0, 5 * HOUR, 6)).toBe(false);
+    expect(isUpdateCheckDue(0, 6 * HOUR, 6)).toBe(true);
+    // Background work started a few minutes early still counts.
+    expect(isUpdateCheckDue(0, 6 * HOUR - 5 * 60 * 1000, 6)).toBe(true);
+    expect(isUpdateCheckDue(0, HOUR, 1)).toBe(true);
+    expect(isUpdateCheckDue(0, 23 * HOUR, 24)).toBe(false);
+    // "Never".
+    expect(isUpdateCheckDue(null, 0, 0)).toBe(false);
+    expect(isUpdateCheckDue(0, 1000 * HOUR, 0)).toBe(false);
+    // Clock moved back.
+    expect(isUpdateCheckDue(10 * HOUR, HOUR, 6)).toBe(true);
+  });
+
+  it('checks again at once after the app was updated', () => {
+    expect(isFirstLaunchOfVersion(null, '1.0.1')).toBe(true);
+    expect(isFirstLaunchOfVersion('1.0.0', '1.0.1')).toBe(true);
+    expect(isFirstLaunchOfVersion('1.0.1', '1.0.1')).toBe(false);
+  });
+
+  it('announces a new version once, unless it was ignored', () => {
+    const release = parseRelease(payload());
+    expect(shouldNotifyRelease(release, '0.4.0', null, null)).toBe(true);
+    expect(shouldNotifyRelease(release, '0.4.0', null, '0.4.1')).toBe(false);
+    expect(shouldNotifyRelease(release, '0.4.0', '0.4.1', null)).toBe(false);
+    expect(shouldNotifyRelease(release, '0.4.1', null, null)).toBe(false);
+    expect(shouldNotifyRelease(null, '0.4.0', null, null)).toBe(false);
   });
 
   it('reads and compares the SHA-256 of the APK', () => {
@@ -93,6 +152,92 @@ describe('GitHub release', () => {
     expect(calls[0]).toBe('https://api.github.com/repos/RedCodeSnoo/LNBook/releases/latest');
     expect(await fetchLatestRelease(answer(404, { message: 'Not Found' }))).toBeNull();
     await expect(fetchLatestRelease(answer(403, {}))).rejects.toThrow('HTTP 403');
+  });
+});
+
+describe('check result', () => {
+  it('says whether the app is up to date', () => {
+    expect(checkStatusKey(true, null, null)?.key).toBe('appUpdate.checking');
+    expect(checkStatusKey(false, 'upToDate', null)?.key).toBe('appUpdate.upToDate');
+    expect(checkStatusKey(false, 'available', '1.0.1')).toEqual({
+      key: 'appUpdate.available',
+      version: '1.0.1',
+    });
+    expect(checkStatusKey(false, 'failed', null)?.key).toBe('appUpdate.checkFailed');
+    // A version found earlier stays announced when a later check fails.
+    expect(checkStatusKey(false, 'failed', '1.0.1')?.key).toBe('appUpdate.available');
+    expect(checkStatusKey(false, null, null)).toBeNull();
+  });
+});
+
+describe('version numbers', () => {
+  it('compares each part as a number', () => {
+    expect(isNewerVersion('0.10.0', '0.9.0')).toBe(true);
+    expect(isNewerVersion('1.0.0', '0.7.0')).toBe(true);
+    expect(isNewerVersion('1.0.1', '1.0.0')).toBe(true);
+    expect(isNewerVersion('v1.0.1', '1.0.1')).toBe(false);
+    expect(isNewerVersion('1.0', '1.0.0')).toBe(false);
+    expect(isNewerVersion('1.0.0-beta', '1.0.0')).toBe(false);
+    expect(compareVersions('0.7.0', '1.0.0')).toBeLessThan(0);
+    expect(compareVersions('2.0.0', '10.0.0')).toBeLessThan(0);
+  });
+});
+
+describe('GitHub API answer', () => {
+  it('reads a real "latest release" answer of the repository', () => {
+    // Trimmed copy of https://api.github.com/repos/RedCodeSnoo/LNBook/releases/latest.
+    const answer = {
+      url: 'https://api.github.com/repos/RedCodeSnoo/LNBook/releases/1',
+      html_url: 'https://github.com/RedCodeSnoo/LNBook/releases/tag/v1.0.0',
+      tag_name: 'v1.0.0',
+      target_commitish: 'main',
+      name: 'LNBook v1.0.0',
+      draft: false,
+      immutable: false,
+      prerelease: false,
+      created_at: '2026-11-15T15:01:00Z',
+      published_at: '2026-11-15T15:10:12Z',
+      assets: [
+        {
+          name: 'LNBook-v1.0.0.apk',
+          content_type: 'application/vnd.android.package-archive',
+          state: 'uploaded',
+          size: 98_765_432,
+          browser_download_url:
+            'https://github.com/RedCodeSnoo/LNBook/releases/download/v1.0.0/LNBook-v1.0.0.apk',
+        },
+        {
+          name: 'LNBook-v1.0.0.apk.sha256',
+          content_type: 'application/octet-stream',
+          state: 'uploaded',
+          size: 84,
+          browser_download_url:
+            'https://github.com/RedCodeSnoo/LNBook/releases/download/v1.0.0/LNBook-v1.0.0.apk.sha256',
+        },
+      ],
+      body: '## Changes\n\n- feat: add the app icon',
+    };
+    const release = parseRelease(answer);
+    expect(release).toMatchObject({
+      version: '1.0.0',
+      apkName: 'LNBook-v1.0.0.apk',
+      apkSize: 98_765_432,
+      checksumUrl:
+        'https://github.com/RedCodeSnoo/LNBook/releases/download/v1.0.0/LNBook-v1.0.0.apk.sha256',
+    });
+    expect(isUpdateAvailable(release, '0.5.0', null)).toBe(true);
+    expect(isUpdateAvailable(release, '1.0.0', null)).toBe(false);
+  });
+
+  it('never uses a cached answer', async () => {
+    let headers: Record<string, string> = {};
+    const fetcher = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      headers = init?.headers as Record<string, string>;
+      return new Response(JSON.stringify(payload()), { status: 200 });
+    }) as typeof fetch;
+    await fetchLatestRelease(fetcher);
+    expect(headers['Cache-Control']).toBe('no-cache');
+    expect(RELEASES_URL).toContain('/releases/latest');
   });
 });
 

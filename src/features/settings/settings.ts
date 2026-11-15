@@ -82,8 +82,8 @@ export interface AppSettings {
   bilingualReading: boolean;
 
   // App updates
-  /** Look for a new version of the app automatically (at most every six hours). */
-  checkAppUpdates: boolean;
+  /** Hours between automatic checks for a new version of the app (0 = never). */
+  appUpdateHours: number;
 
   // Backups
   autoBackup: AutoBackupFrequency;
@@ -138,7 +138,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   translateAhead: 3,
   bilingualReading: false,
 
-  checkAppUpdates: true,
+  appUpdateHours: 6,
 
   autoBackup: 'off',
   autoBackupFolder: '',

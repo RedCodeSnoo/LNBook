@@ -3,7 +3,14 @@ import { GITHUB_OWNER, GITHUB_REPOSITORY } from '../../services/appInfo';
 import { isNewerVersion } from '../../services/version';
 
 export const RELEASES_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/latest`;
-export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** Choices of the automatic check, in hours (0 = never). */
+export const APP_UPDATE_INTERVALS = [1, 6, 12, 24, 0] as const;
+const HOUR_MS = 60 * 60 * 1000;
+/**
+ * Android starts background work a little early or late: a check that is almost due is
+ * done now rather than one whole period later.
+ */
+const DUE_TOLERANCE_MS = 10 * 60 * 1000;
 
 export interface AppRelease {
   /** Version without the leading "v". */
@@ -82,9 +89,61 @@ export function isUpdateAvailable(
   );
 }
 
-/** Automatic checks happen at most once every six hours. */
-export function isUpdateCheckDue(lastCheckAt: number | null, now: number): boolean {
-  return lastCheckAt === null || now - lastCheckAt >= UPDATE_CHECK_INTERVAL_MS;
+/**
+ * True when an automatic check should run: never when turned off (0 hours), always the
+ * first time, otherwise once the chosen number of hours has passed. A clock moved back
+ * (last check in the future) also makes it due.
+ */
+export function isUpdateCheckDue(lastCheckAt: number | null, now: number, hours: number): boolean {
+  if (hours <= 0) {
+    return false;
+  }
+  if (lastCheckAt === null || lastCheckAt > now) {
+    return true;
+  }
+  return now - lastCheckAt >= hours * HOUR_MS - DUE_TOLERANCE_MS;
+}
+
+/**
+ * What the app remembers between launches is only valid for the version that stored it:
+ * after an update (or a downgrade), the next automatic check runs at once.
+ */
+export function isFirstLaunchOfVersion(lastSeenVersion: string | null, installed: string): boolean {
+  return lastSeenVersion !== installed;
+}
+
+/** A new version is announced by notification once, and never when it was ignored. */
+export function shouldNotifyRelease(
+  release: AppRelease | null,
+  installedVersion: string,
+  ignoredVersion: string | null,
+  notifiedVersion: string | null,
+): release is AppRelease {
+  return (
+    isUpdateAvailable(release, installedVersion, ignoredVersion) &&
+    release.version !== notifiedVersion
+  );
+}
+
+/** Translation key of the line shown under "Check for updates". */
+export function checkStatusKey(
+  checking: boolean,
+  outcome: 'available' | 'upToDate' | 'failed' | null,
+  availableVersion: string | null,
+): { key: string; version?: string } | null {
+  if (checking) {
+    return { key: 'appUpdate.checking' };
+  }
+  if (availableVersion) {
+    return { key: 'appUpdate.available', version: availableVersion };
+  }
+  if (outcome === 'failed') {
+    return { key: 'appUpdate.checkFailed' };
+  }
+  if (outcome === 'upToDate') {
+    return { key: 'appUpdate.upToDate' };
+  }
+  return null;
 }
 
 /** SHA-256 written in a `sha256sum` file ("<hash>  <file name>"), lower case, or null. */
@@ -100,7 +159,12 @@ export function checksumMatches(expected: string | null, actual: string): boolea
 /** Fetches the latest release. Throws when GitHub cannot be reached. */
 export async function fetchLatestRelease(fetcher: typeof fetch): Promise<AppRelease | null> {
   const response = await fetcher(RELEASES_URL, {
-    headers: { Accept: 'application/vnd.github+json' },
+    headers: {
+      Accept: 'application/vnd.github+json',
+      // Never an answer kept by an HTTP cache: a release published a minute ago counts.
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
   });
   if (response.status === 404) {
     // No release published yet.

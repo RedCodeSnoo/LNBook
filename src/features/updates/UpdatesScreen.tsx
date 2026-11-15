@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../../theme/ThemeProvider';
 import { RADIUS, SPACING } from '../../theme/typography';
 import { AppUpdateCard } from '../appUpdate/AppUpdateCard';
+import { AppUpdateCheck } from '../appUpdate/AppUpdateCheck';
 import { sourceErrorMessage } from '../browse/SourceBits';
 import { queueDownloads } from '../downloads/downloadService';
 import { PluginError } from '../../plugins/pluginErrors';
@@ -121,6 +122,14 @@ export function UpdatesScreen({ navigation }: TabScreenProps<'updates'>) {
 
   const header = (
     <View>
+      <AppUpdateCheck
+        onChecked={() => {
+          // New chapters are looked for at the same time.
+          if (!checking && followed > 0) {
+            void runUpdateCheck();
+          }
+        }}
+      />
       <AppUpdateCard />
       {checking ? (
         <View style={[styles.banner, { backgroundColor: colors.primaryContainer }]}>

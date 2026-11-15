@@ -5,6 +5,7 @@ import { AndroidImportance } from 'expo-notifications';
 import { navigationRef } from '../app/navigationRef';
 
 export const UPDATES_CHANNEL = 'updates';
+export const APP_UPDATE_CHANNEL = 'app-update';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -52,10 +53,36 @@ export async function notifyNewChapters(
   }
 }
 
+/** "Version X available": a tap opens the Updates tab. */
+export async function notifyAppUpdate(
+  channelName: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  try {
+    await Notifications.setNotificationChannelAsync(APP_UPDATE_CHANNEL, {
+      name: channelName,
+      importance: AndroidImportance.DEFAULT,
+    });
+    await Notifications.scheduleNotificationAsync({
+      identifier: 'app-update',
+      content: { title, body, data: { screen: 'updates' } },
+      trigger: { channelId: APP_UPDATE_CHANNEL },
+    });
+  } catch {
+    // Not allowed or not available: the card in the Updates tab is enough.
+  }
+}
+
 function open(data: unknown): void {
-  const novelId = (data as { novelId?: unknown } | null)?.novelId;
-  if (typeof novelId === 'number' && navigationRef.isReady()) {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+  const { novelId, screen } = (data ?? {}) as { novelId?: unknown; screen?: unknown };
+  if (typeof novelId === 'number') {
     navigationRef.navigate('novel', { novelId });
+  } else if (screen === 'updates') {
+    navigationRef.navigate('tabs', { screen: 'updates' });
   }
 }
 

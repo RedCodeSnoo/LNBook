@@ -51,7 +51,8 @@ export function AppUpdateCard() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const dateFormat = useSetting('dateFormat');
-  const { release, ignored, phase, received, total, failure } = useAppUpdate();
+  const { release, ignored, phase, received, total, failure, failureDetail, failureMessage } =
+    useAppUpdate();
   // The changelog is folded: the card must not hide the new chapters below it.
   const [showNotes, setShowNotes] = useState(false);
 
@@ -148,9 +149,13 @@ export function AppUpdateCard() {
         <AppText variant="label" color={colors.error}>
           {failure === 'checksum'
             ? t('appUpdate.failedChecksum')
-            : failure === 'install'
-              ? t('appUpdate.failedInstall')
-              : t('appUpdate.failedDownload')}
+            : failure === 'cancelled'
+              ? t('appUpdate.cancelled')
+              : failure === 'install'
+                ? [t(`appUpdate.installError.${failureDetail ?? 'failure'}`), failureMessage]
+                    .filter(Boolean)
+                    .join('\n')
+                : t('appUpdate.failedDownload')}
         </AppText>
       ) : null}
       {phase === 'installing' ? (

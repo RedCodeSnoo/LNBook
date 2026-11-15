@@ -677,13 +677,30 @@
     "permissionMessage": "To install the update, Android must allow LNBook to install apps. Open the setting, turn on “Allow from this source”, then come back: the installation resumes by itself. This is asked only once.",
     "openSettings": "Open the setting",
     "checkNow": "Check for updates",
-    "upToDate": "The app is up to date",
+    "upToDate": "You have the latest version",
     "checkFailed": "Could not check. Check your connection.",
     "section": "App update",
     "autoCheck": "Check automatically",
-    "autoCheckHint": "At most once every 6 hours, from GitHub",
+    "autoCheckHint": "At launch, when you come back to the app and in the background, on GitHub. A notification announces each new version.",
     "showChanges": "See what's new",
-    "hideChanges": "Hide what's new"
+    "hideChanges": "Hide what's new",
+    "checking": "Checking…",
+    "installed": "Installed version: {{version}}",
+    "lastCheck": "checked {{day}} at {{time}}",
+    "openUpdates": "Open the Updates tab to install it",
+    "everyHour": "Every hour",
+    "channel": "New app version",
+    "notificationBody": "Tap to install it from the Updates tab.",
+    "cancelled": "Installation cancelled.",
+    "installError": {
+      "failure": "Android could not install the update.",
+      "blocked": "The installation was blocked by the phone (security check or restriction).",
+      "conflict": "Android refuses to replace the installed app: it was installed from another APK, signed differently.",
+      "incompatible": "This version is not compatible with this phone.",
+      "invalid": "The downloaded file is not a valid APK.",
+      "storage": "Not enough free space to install the update.",
+      "aborted": "Installation cancelled."
+    }
   },
   "backup": {
     "manual": "Manual backup",

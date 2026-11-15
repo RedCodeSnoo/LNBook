@@ -15,6 +15,18 @@ export interface DownloadedUpdate {
   size: number;
 }
 
+/** Result of an installation reported by Android ("confirm": its screen is open). */
+export type InstallStatus =
+  | 'confirm'
+  | 'success'
+  | 'failure'
+  | 'aborted'
+  | 'blocked'
+  | 'conflict'
+  | 'incompatible'
+  | 'invalid'
+  | 'storage';
+
 interface LnbookSystemModule {
   setVolumeKeysEnabled(enabled: boolean): void;
   isMusicActive(): boolean;
@@ -33,7 +45,12 @@ interface LnbookSystemModule {
   downloadUpdate(url: string, name: string): Promise<DownloadedUpdate>;
   canInstallUpdates(): boolean;
   openInstallSettings(): void;
-  installUpdate(path: string): void;
+  installUpdate(path: string): Promise<'session' | 'intent'>;
+  clearUpdateDownloads(): void;
+  addListener(
+    event: 'onUpdateInstallStatus',
+    listener: (event: { status: InstallStatus; message: string | null }) => void,
+  ): EventSubscription;
   addListener(
     event: 'onUpdateDownloadProgress',
     listener: (event: { received: number; total: number }) => void,
@@ -109,9 +126,25 @@ export function openInstallSettings(): void {
   native.openInstallSettings();
 }
 
-/** Opens the Android installer on a file returned by `downloadUpdate`. */
-export function installUpdate(path: string): void {
-  native.installUpdate(path);
+/**
+ * Installs a file returned by `downloadUpdate`. With "session", Android reports the
+ * result to `addInstallStatusListener`; with "intent", the older installer screen opened.
+ */
+export function installUpdate(path: string): Promise<'session' | 'intent'> {
+  return native.installUpdate(path);
+}
+
+export function addInstallStatusListener(
+  listener: (status: InstallStatus, message: string | null) => void,
+): EventSubscription {
+  return native.addListener('onUpdateInstallStatus', (event) =>
+    listener(event.status, event.message),
+  );
+}
+
+/** Deletes the downloaded update files. */
+export function clearUpdateDownloads(): void {
+  native.clearUpdateDownloads();
 }
 
 /** Removes every cookie of the web view and of the requests made by the sources. */

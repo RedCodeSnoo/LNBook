@@ -28,7 +28,7 @@ class LnbookSystemModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("LnbookSystem")
 
-    Events("onVolumeKey", "onIncomingFiles", "onUpdateDownloadProgress")
+    Events("onVolumeKey", "onIncomingFiles", "onUpdateDownloadProgress", "onUpdateInstallStatus")
 
     OnCreate {
       SystemState.onVolumeKey = { direction -> sendEvent("onVolumeKey", mapOf("direction" to direction)) }
@@ -119,9 +119,24 @@ class LnbookSystemModule : Module() {
       Unit
     }
 
-    Function("installUpdate") { path: String ->
+    // Returns "session" when Android will report the result through onUpdateInstallStatus,
+    // "intent" when the older installer screen was opened instead.
+    AsyncFunction("installUpdate") { path: String ->
       val context = appContext.reactContext ?: throw IllegalStateException("No context")
-      AppUpdate.install(context, path)
+      try {
+        AppUpdate.installWithSession(context, path) { status, message ->
+          sendEvent("onUpdateInstallStatus", mapOf("status" to status, "message" to message))
+        }
+        "session"
+      } catch (error: Exception) {
+        AppUpdate.install(context, path)
+        "intent"
+      }
+    }
+
+    Function("clearUpdateDownloads") {
+      appContext.reactContext?.let { AppUpdate.clearDownloads(it) }
+      Unit
     }
 
     // Runs off the JavaScript thread: each file is copied into the cache of the app while

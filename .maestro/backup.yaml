@@ -20,8 +20,12 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'About'
 - tapOn: 'Check for updates'
 - extendedWaitUntil:
-    visible: 'Version .* available'
+    visible: 'Open the Updates tab to install it'
     timeout: 30000
+- tapOn: 'Open the Updates tab to install it'
+# The Updates tab has the same button at the top, with the result under it.
+- assertVisible: 'Check for updates'
+- assertVisible: 'Version .* available'
 - tapOn: 'Download and install'
 - extendedWaitUntil:
     visible: 'Allow the installation'

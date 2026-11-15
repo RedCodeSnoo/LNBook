@@ -1,4 +1,4 @@
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
@@ -7,6 +7,7 @@ import { invalidate, useQuery } from '../../db/invalidation';
 import { ensureNotificationPermission } from '../../services/notifications';
 import {
   AppBar,
+  AppText,
   CheckItem,
   RadioItem,
   Screen,
@@ -14,7 +15,9 @@ import {
   SwitchItem,
 } from '../../theme/components';
 import { listCategories, setCategoryExcluded } from '../library/libraryRepository';
+import { APP_UPDATE_INTERVALS } from '../appUpdate/releaseCheck';
 import { syncBackgroundCheck } from '../updates/updateService';
+import { SPACING } from '../../theme/typography';
 import { setSetting, useSetting } from './settingsStore';
 
 const FREQUENCIES = [6, 12, 24, 0];
@@ -25,7 +28,7 @@ export function UpdateSettingsScreen({ navigation }: RootScreenProps<'settingsUp
   const hours = useSetting('updateCheckHours');
   const wifiOnly = useSetting('updateWifiOnly');
   const notify = useSetting('notifyNewChapters');
-  const checkApp = useSetting('checkAppUpdates');
+  const appHours = useSetting('appUpdateHours');
   const categories = useQuery(() => listCategories(getDb()), ['categories']);
 
   return (
@@ -63,13 +66,29 @@ export function UpdateSettingsScreen({ navigation }: RootScreenProps<'settingsUp
           }}
         />
         <SectionHeader title={t('appUpdate.section')} />
-        <SwitchItem
-          icon="arrow-up-bold-circle-outline"
-          title={t('appUpdate.autoCheck')}
-          subtitle={t('appUpdate.autoCheckHint')}
-          value={checkApp}
-          onValueChange={(value) => setSetting('checkAppUpdates', value)}
-        />
+        {APP_UPDATE_INTERVALS.map((value) => (
+          <RadioItem
+            key={value}
+            title={
+              value === 0
+                ? t('updates.never')
+                : value === 1
+                  ? t('appUpdate.everyHour')
+                  : t('updates.everyHours', { count: value })
+            }
+            checked={appHours === value}
+            onPress={() => {
+              setSetting('appUpdateHours', value);
+              void syncBackgroundCheck();
+              if (value > 0) {
+                void ensureNotificationPermission();
+              }
+            }}
+          />
+        ))}
+        <AppText variant="caption" secondary style={styles.hint}>
+          {t('appUpdate.autoCheckHint')}
+        </AppText>
         <SectionHeader title={t('updates.excludedCategories')} />
         {categories.map((category) => (
           <CheckItem
@@ -86,3 +105,7 @@ export function UpdateSettingsScreen({ navigation }: RootScreenProps<'settingsUp
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  hint: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
+});
