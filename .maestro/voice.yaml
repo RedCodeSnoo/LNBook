@@ -6,8 +6,13 @@ appId: com.redcodesnoo.lnbook
 - tapOn: 'More'
 - tapOn: 'Settings'
 - tapOn: 'Voice'
-- assertVisible: 'Speed'
-- assertVisible: 'Install more voices'
+# The list of installed voices comes first: the other settings are further down.
+- scrollUntilVisible:
+    element: '.*Speed.*'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'Install more voices'
+    direction: DOWN
 - tapOn: 'Back'
 - tapOn: 'Back'
 - tapOn: 'Library'
