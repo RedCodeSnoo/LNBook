@@ -6,7 +6,13 @@ import { epub2WithNcx, epub3WithVolumes } from '../../../epub/__tests__/fixtures
 import { parseEpub } from '../../../epub/parseEpub';
 import { MemoryFileStore } from '../../../services/fileStore';
 import { importParsedBook } from '../../library/importBook';
-import { buildChapterList, findResumeChapter, NO_CHAPTER_FILTERS } from '../chapterList';
+import {
+  buildChapterList,
+  findResumeChapter,
+  NO_CHAPTER_FILTERS,
+  scrollerIndex,
+  scrollerLabel,
+} from '../chapterList';
 import { chapterNumberFromTitle, formatChapterNumber } from '../chapterNumber';
 import {
   applySourceMetadata,
@@ -179,6 +185,35 @@ describe('buildChapterList', () => {
       'Chapter 3: Night',
       'Chapter 4: End',
     ]);
+  });
+
+  it('gives the fast scroller its row and the chapter number with its volume', () => {
+    const { db, novelId } = setup();
+    const volumeList = listVolumes(db, novelId);
+    const items = buildChapterList(listChapters(db, novelId), volumeList, options({}));
+    // Prologue, # Volume 1, Chapter 1, Chapter 2, # Volume 2, Chapter 3, Chapter 4.
+    expect(items).toHaveLength(7);
+    expect(scrollerIndex(0, items.length)).toBe(0);
+    expect(scrollerIndex(1, items.length)).toBe(6);
+    expect(scrollerIndex(0.5, items.length)).toBe(3);
+    expect(scrollerIndex(-2, items.length)).toBe(0);
+    expect(scrollerIndex(7, items.length)).toBe(6);
+    expect(scrollerIndex(Number.NaN, items.length)).toBe(0);
+    expect(scrollerIndex(0.5, 0)).toBe(0);
+    // 2,000 chapters: the middle of the bar is the middle of the list.
+    expect(scrollerIndex(0.5, 2000)).toBe(1000);
+
+    expect(scrollerLabel(items, 0, volumeList)).toEqual({ number: '1', volume: null });
+    expect(scrollerLabel(items, 3, volumeList)).toEqual({
+      number: expect.any(String),
+      volume: 'Volume 1 – Dawn',
+    });
+    // A volume header shows the first chapter under it.
+    expect(scrollerLabel(items, 4, volumeList)?.volume).toBe('Volume 2 – Dusk');
+    expect(scrollerLabel(items, 4, volumeList)?.number).toBe(
+      scrollerLabel(items, 5, volumeList)?.number,
+    );
+    expect(scrollerLabel(items, 99, volumeList)).toBeNull();
   });
 
   it('sorts descending, collapses volumes, filters and searches', () => {

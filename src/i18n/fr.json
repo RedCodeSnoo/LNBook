@@ -353,7 +353,9 @@
     "exportAllChapters_one": "Tout le novel ({{count}} chapitre)",
     "exportAllChapters_other": "Tout le novel ({{count}} chapitres)",
     "exportRangeValue": "Chapitres {{from}} à {{to}}",
-    "exportEverything": "Tout le novel"
+    "exportEverything": "Tout le novel",
+    "scrollerChapter": "Chapitre {{number}}",
+    "fastScroll": "Défilement rapide des chapitres"
   },
   "categories": {
     "title": "Catégories",

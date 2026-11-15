@@ -1,10 +1,17 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import {
+  Share,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
+import { FastScroller, type FastScrollerHandle } from './FastScroller';
 import { useBackHandler } from '../../app/useBackHandler';
 import { getDb } from '../../db/client';
 import { invalidate, useQuery } from '../../db/invalidation';
@@ -56,6 +63,7 @@ import {
   findResumeChapter,
   NO_CHAPTER_FILTERS,
   type ChapterFilters,
+  scrollerLabel,
   type ChapterListItem,
 } from './chapterList';
 import { ChapterRow, VolumeHeader } from './ChapterRow';
@@ -147,6 +155,31 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
     [tab, chapters, volumes, ascending, filters, search, collapsed],
   );
   const readCount = useMemo(() => chapters.filter((chapter) => chapter.isRead).length, [chapters]);
+
+  // Fast scroller on the right edge of the chapter list.
+  const scrollerRef = useRef<FastScrollerHandle>(null);
+  const scrollerLabelAt = useCallback(
+    (index: number) => scrollerLabel(items, index, volumes),
+    [items, volumes],
+  );
+  const jumpToRow = useCallback((index: number, fraction: number) => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+    if (fraction <= 0) {
+      // The very top shows the header of the novel again.
+      list.scrollToOffset({ offset: 0, animated: false });
+    } else if (fraction >= 1) {
+      list.scrollToEnd({ animated: false });
+    } else {
+      void list.scrollToIndex({ index, animated: false, viewPosition: 0 });
+    }
+  }, []);
+  const onListScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => scrollerRef.current?.onScroll(event),
+    [],
+  );
   const resume = useMemo(
     () => findResumeChapter(chapters, novel?.lastReadChapterId ?? null),
     [chapters, novel?.lastReadChapterId],
@@ -591,37 +624,49 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         />
       )}
 
-      <FlashList
-        ref={listRef}
-        data={items}
-        extraData={[selection, translatedChapters, activeLang]}
-        keyExtractor={(item) => item.key}
-        getItemType={(item) => item.type}
-        ListHeaderComponent={header}
-        ListEmptyComponent={emptyList}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) =>
-          item.type === 'volume' ? (
-            <VolumeHeader
-              volume={item.volume}
-              chapterCount={item.chapterCount}
-              readCount={item.readCount}
-              collapsed={item.collapsed}
-              onPress={toggleVolume}
-              onLongPress={onVolumeLongPress}
-            />
-          ) : (
-            <ChapterRow
-              chapter={item.chapter}
-              selected={selection.includes(item.chapter.id)}
-              translated={translatedChapters.has(item.chapter.id)}
-              translatedTitle={activeLang ? translatedChapters.get(item.chapter.id) : null}
-              onPress={selectionMode ? toggleSelected : openChapter}
-              onLongPress={onLongPress}
-            />
-          )
-        }
-      />
+      <View style={styles.listBox}>
+        <FlashList
+          ref={listRef}
+          onScroll={onListScroll}
+          scrollEventThrottle={32}
+          data={items}
+          extraData={[selection, translatedChapters, activeLang]}
+          keyExtractor={(item) => item.key}
+          getItemType={(item) => item.type}
+          ListHeaderComponent={header}
+          ListEmptyComponent={emptyList}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) =>
+            item.type === 'volume' ? (
+              <VolumeHeader
+                volume={item.volume}
+                chapterCount={item.chapterCount}
+                readCount={item.readCount}
+                collapsed={item.collapsed}
+                onPress={toggleVolume}
+                onLongPress={onVolumeLongPress}
+              />
+            ) : (
+              <ChapterRow
+                chapter={item.chapter}
+                selected={selection.includes(item.chapter.id)}
+                translated={translatedChapters.has(item.chapter.id)}
+                translatedTitle={activeLang ? translatedChapters.get(item.chapter.id) : null}
+                onPress={selectionMode ? toggleSelected : openChapter}
+                onLongPress={onLongPress}
+              />
+            )
+          }
+        />
+        {tab !== 'quotes' ? (
+          <FastScroller
+            ref={scrollerRef}
+            count={items.length}
+            label={scrollerLabelAt}
+            onJump={jumpToRow}
+          />
+        ) : null}
+      </View>
 
       {selectionMode ? (
         <View
@@ -1042,6 +1087,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
 }
 
 const styles = StyleSheet.create({
+  listBox: { flex: 1 },
   list: { paddingBottom: SPACING.xxl },
   loading: { padding: SPACING.lg, gap: SPACING.sm },
   dialogCheck: { marginHorizontal: -SPACING.lg },

@@ -145,3 +145,47 @@ export function findResumeChapter(
   const firstUnread = chapters.find((chapter) => !chapter.isRead);
   return { chapter: firstUnread ?? chapters[chapters.length - 1], started };
 }
+
+export interface ScrollerLabel {
+  /** Number of the chapter ("12", "12.5"), null when the row is a volume without chapters. */
+  number: string | null;
+  /** Volume of the row, when the novel has volumes. */
+  volume: string | null;
+}
+
+/** Row reached for a position of the fast scroller (0 = top, 1 = bottom). */
+export function scrollerIndex(fraction: number, count: number): number {
+  if (count <= 0) {
+    return 0;
+  }
+  const clamped = Math.min(1, Math.max(0, Number.isFinite(fraction) ? fraction : 0));
+  return Math.round(clamped * (count - 1));
+}
+
+/** Bubble shown next to the fast scroller: chapter number and volume of the row. */
+export function scrollerLabel(
+  items: ChapterListItem[],
+  index: number,
+  volumes: Volume[],
+): ScrollerLabel | null {
+  const item = items[index];
+  if (!item) {
+    return null;
+  }
+  if (item.type === 'volume') {
+    const next = items[index + 1];
+    return {
+      number:
+        next?.type === 'chapter'
+          ? formatChapterNumber(next.chapter.number ?? next.chapter.position + 1)
+          : null,
+      volume: item.volume.title,
+    };
+  }
+  const { chapter } = item;
+  const volume =
+    chapter.volumeId !== null
+      ? (volumes.find((candidate) => candidate.id === chapter.volumeId)?.title ?? null)
+      : null;
+  return { number: formatChapterNumber(chapter.number ?? chapter.position + 1), volume };
+}
