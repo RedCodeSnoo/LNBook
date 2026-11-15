@@ -1,11 +1,13 @@
 package expo.modules.lnbooksystem
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.webkit.CookieManager
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -66,6 +68,27 @@ class LnbookSystemModule : Module() {
     Function("stopDownloadService") {
       appContext.reactContext?.let { it.stopService(Intent(it, DownloadService::class.java)) }
       Unit
+    }
+
+    // Cookies are shared by the web view and by the requests of the source plugins.
+    AsyncFunction("clearCookies") { promise: Promise ->
+      Handler(Looper.getMainLooper()).post {
+        try {
+          val cookies = CookieManager.getInstance()
+          cookies.removeAllCookies { removed ->
+            cookies.flush()
+            promise.resolve(removed)
+          }
+        } catch (error: Exception) {
+          promise.reject("ERR_COOKIES", error.message ?: "Cannot clear the cookies", error)
+        }
+      }
+    }
+
+    // "Reset the app": Android erases every data of the app and closes it.
+    Function("resetApp") {
+      val manager = appContext.reactContext?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+      manager?.clearApplicationUserData() == true
     }
 
     Function("isMusicActive") {

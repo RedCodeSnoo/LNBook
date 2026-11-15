@@ -10,12 +10,15 @@ import { DownloadsScreen } from '../features/downloads/DownloadsScreen';
 import { StorageScreen } from '../features/downloads/StorageScreen';
 import { CategoriesScreen } from '../features/library/CategoriesScreen';
 import { AboutScreen } from '../features/more/AboutScreen';
+import { LicensesScreen } from '../features/more/LicensesScreen';
 import { NovelEditScreen } from '../features/novel/NovelEditScreen';
 import { NovelScreen } from '../features/novel/NovelScreen';
 import { QuoteFoldersScreen } from '../features/quotes/QuoteFoldersScreen';
+import { QuotesScreen } from '../features/quotes/QuotesScreen';
 import { ChapterEditScreen } from '../features/reader/ChapterEditScreen';
 import { ReaderScreen } from '../features/reader/ReaderScreen';
 import { ReplacementsScreen } from '../features/reader/ReplacementsScreen';
+import { AdvancedSettingsScreen } from '../features/settings/AdvancedSettingsScreen';
 import { AppearanceSettingsScreen } from '../features/settings/AppearanceSettingsScreen';
 import { GeneralSettingsScreen } from '../features/settings/GeneralSettingsScreen';
 import { LibrarySettingsScreen } from '../features/settings/LibrarySettingsScreen';
@@ -24,6 +27,8 @@ import { SourcesSettingsScreen } from '../features/settings/SourcesSettingsScree
 import { DownloadSettingsScreen } from '../features/settings/DownloadSettingsScreen';
 import { UpdateSettingsScreen } from '../features/settings/UpdateSettingsScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { NovelStatsScreen } from '../features/stats/NovelStatsScreen';
+import { StatsScreen } from '../features/stats/StatsScreen';
 import { GlossaryScreen } from '../features/translation/GlossaryScreen';
 import { TranslationSettingsScreen } from '../features/translation/TranslationSettingsScreen';
 import { VoiceSettingsScreen } from '../features/tts/VoiceSettingsScreen';
@@ -74,6 +79,11 @@ export function RootNavigator() {
       <Stack.Screen name="settingsVoice" component={VoiceSettingsScreen} />
       <Stack.Screen name="settingsTranslation" component={TranslationSettingsScreen} />
       <Stack.Screen name="glossary" component={GlossaryScreen} />
+      <Stack.Screen name="settingsAdvanced" component={AdvancedSettingsScreen} />
+      <Stack.Screen name="stats" component={StatsScreen} />
+      <Stack.Screen name="novelStats" component={NovelStatsScreen} />
+      <Stack.Screen name="quotes" component={QuotesScreen} />
+      <Stack.Screen name="licenses" component={LicensesScreen} />
       <Stack.Screen name="placeholder" component={PlaceholderScreen} />
     </Stack.Navigator>
   );

@@ -69,7 +69,7 @@ export async function runUpdateCheck(options: { background?: boolean } = {}) {
     writeValue(getDb(), LAST_FAILURES_KEY, result.failures);
 
     const toDownload = result.updates
-      .filter((update) => update.autoDownload)
+      .filter((update) => update.autoDownload || getSetting('autoDownloadNew'))
       .flatMap((update) => update.chapterIds);
     if (toDownload.length > 0) {
       queueDownloads(toDownload);

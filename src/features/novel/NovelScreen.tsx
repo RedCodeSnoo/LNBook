@@ -88,6 +88,7 @@ type Prompt =
   | { kind: 'download' }
   | { kind: 'downloadRange' }
   | { kind: 'export' }
+  | { kind: 'exportRange' }
   | { kind: 'translate'; lang: string | null };
 
 const NO_TRANSLATIONS: ReadonlyMap<number, string | null> = new Map();
@@ -114,6 +115,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const [input, setInput] = useState('');
   const [keepTimes, setKeepTimes] = useState(true);
   const [exportLang, setExportLang] = useState<string | null>(null);
+  const [exportRange, setExportRange] = useState<{ from: number; to: number } | null>(null);
 
   // Translations: languages available, and the chapters of the one being read.
   const translatedLangs = useQuery(
@@ -165,7 +167,11 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
   const exportEpub = (target: 'folder' | 'share') => {
     setPrompt({ kind: 'none' });
     showToast(t('novel.exporting'));
-    void exportNovelToDevice(novelId, target, { lang: exportLang }).then((outcome) => {
+    void exportNovelToDevice(novelId, target, {
+      lang: exportLang,
+      from: exportRange?.from,
+      to: exportRange?.to,
+    }).then((outcome) => {
       if (outcome.status === 'saved' || outcome.status === 'shared') {
         showToast(
           outcome.missing > 0
@@ -341,6 +347,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
         resume={resume}
         actions={actions}
         onContinue={() => resume && openChapter(resume.chapter)}
+        onOpenStats={() => navigation.navigate('novelStats', { novelId })}
       />
       <SegmentedTabs<NovelTab>
         value={tab}
@@ -464,6 +471,7 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
                   icon: 'book-arrow-up-outline',
                   onPress: () => {
                     setExportLang(activeLang);
+                    setExportRange(null);
                     setPrompt({ kind: 'export' });
                   },
                 },
@@ -939,6 +947,19 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           </View>
         ) : null}
         <ListItem
+          icon="arrow-expand-horizontal"
+          title={t('novel.exportChapters')}
+          subtitle={
+            exportRange
+              ? t('novel.exportRangeValue', { from: exportRange.from, to: exportRange.to })
+              : t('novel.exportAllChapters', { count: chapters.length })
+          }
+          onPress={() => {
+            setInput(`${exportRange?.from ?? 1}-${exportRange?.to ?? chapters.length}`);
+            setPrompt({ kind: 'exportRange' });
+          }}
+        />
+        <ListItem
           icon="folder-outline"
           title={t('novel.exportToFolder')}
           onPress={() => exportEpub('folder')}
@@ -949,6 +970,43 @@ export function NovelScreen({ navigation, route }: RootScreenProps<'novel'>) {
           onPress={() => exportEpub('share')}
         />
       </BottomSheet>
+      <Dialog
+        visible={prompt.kind === 'exportRange'}
+        title={t('novel.exportChapters')}
+        message={t('downloads.rangeHint', { count: chapters.length })}
+        onClose={() => setPrompt({ kind: 'export' })}
+        actions={[
+          {
+            label: t('novel.exportEverything'),
+            onPress: () => {
+              setExportRange(null);
+              setInput('');
+              setPrompt({ kind: 'export' });
+            },
+          },
+          {
+            label: t('common.ok'),
+            disabled: !/^\s*\d+\s*[-–]\s*\d+\s*$/.test(input),
+            onPress: () => {
+              const [first, last] = input.split(/[-–]/).map((part) => Number(part.trim()));
+              const from = Math.max(1, Math.min(first, last));
+              const to = Math.min(chapters.length, Math.max(first, last));
+              setExportRange(from === 1 && to === chapters.length ? null : { from, to });
+              setInput('');
+              setPrompt({ kind: 'export' });
+            },
+          },
+        ]}
+      >
+        <TextField
+          autoFocus
+          value={input}
+          onChangeText={setInput}
+          placeholder="1-200"
+          accessibilityLabel={t('novel.exportChapters')}
+          keyboardType="numbers-and-punctuation"
+        />
+      </Dialog>
       <TranslationSheet
         novel={novel}
         chapterCount={chapters.length}

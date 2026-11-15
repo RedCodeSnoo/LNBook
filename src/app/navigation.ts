@@ -41,6 +41,12 @@ export type RootStackParamList = {
   backup: undefined;
   settingsVoice: undefined;
   settingsTranslation: undefined;
+  settingsAdvanced: undefined;
+  stats: undefined;
+  novelStats: { novelId: number };
+  /** Quotes of every novel. */
+  quotes: undefined;
+  licenses: undefined;
   /** Glossary of a novel; `term` proposes a new entry (text selected in the reader). */
   glossary: { novelId: number; term?: string };
   /** Screen of a feature that is not available yet. */

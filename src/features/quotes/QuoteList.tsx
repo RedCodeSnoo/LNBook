@@ -23,6 +23,7 @@ import i18n from '../../i18n';
 import { useSetting } from '../settings/settingsStore';
 import { QuoteEditorSheet } from './QuoteEditorSheet';
 import { exportQuotes, quoteLocation } from './quoteFormat';
+import { QuoteImageSheet } from './QuoteImageSheet';
 import {
   countByFolder,
   deleteQuote,
@@ -38,7 +39,14 @@ type FolderFilter = number | 'none' | 'all';
  * Quotes of one novel (or of every novel) with folder chips, search and sort.
  * Not virtualized: it lives inside the scrolling header of the novel page.
  */
-export function QuoteList({ novelId }: { novelId?: number }) {
+export function QuoteList({
+  novelId,
+  showNovel = novelId === undefined,
+}: {
+  novelId?: number;
+  /** Show the title of the novel on each quote (global view). */
+  showNovel?: boolean;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const dateFormat = useSetting('dateFormat');
@@ -48,6 +56,7 @@ export function QuoteList({ novelId }: { novelId?: number }) {
   const [searching, setSearching] = useState(false);
   const [actionsFor, setActionsFor] = useState<QuoteView | null>(null);
   const [editing, setEditing] = useState<QuoteView | null>(null);
+  const [imageOf, setImageOf] = useState<QuoteView | null>(null);
 
   const all = useQuery(() => listQuotes(getDb(), { novelId, sort }), ['quotes'], [novelId, sort]);
   const folders = useQuery(() => listFolders(getDb()), ['quotes']);
@@ -194,7 +203,7 @@ export function QuoteList({ novelId }: { novelId?: number }) {
           <AppText>{quote.text}</AppText>
           <AppText variant="caption" secondary>
             {[
-              novelId === undefined ? quote.novelTitle : null,
+              showNovel ? quote.novelTitle : null,
               quoteLocation(quote, t),
               formatDate(quote.createdAt, dateFormat, i18n.language),
             ]
@@ -251,6 +260,14 @@ export function QuoteList({ novelId }: { novelId?: number }) {
               }}
             />
             <ListItem
+              icon="image-outline"
+              title={t('quotes.shareImage')}
+              onPress={() => {
+                setImageOf(actionsFor);
+                setActionsFor(null);
+              }}
+            />
+            <ListItem
               icon="trash-can-outline"
               title={t('common.delete')}
               onPress={() => {
@@ -263,6 +280,7 @@ export function QuoteList({ novelId }: { novelId?: number }) {
           </>
         ) : null}
       </BottomSheet>
+      <QuoteImageSheet quote={imageOf} onClose={() => setImageOf(null)} />
       <QuoteEditorSheet
         visible={editing !== null}
         quote={editing}

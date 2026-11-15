@@ -13,6 +13,7 @@ appId: com.redcodesnoo.lnbook
     visible: '.*Prologue paragraph 1\..*'
     timeout: 10000
     optional: true
+- takeScreenshot: shot-reader
 # A tap in the middle shows the bars.
 - tapOn:
     point: '50%,50%'
@@ -20,6 +21,7 @@ appId: com.redcodesnoo.lnbook
 - assertVisible: 'Reading settings'
 - tapOn: 'Reading settings'
 - assertVisible: 'Page theme'
+- takeScreenshot: shot-reader-settings
 - tapOn: 'Sepia'
 - back
 - tapOn:

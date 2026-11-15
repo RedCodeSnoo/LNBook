@@ -5,6 +5,8 @@ import { loadSettings } from '../features/settings/settingsStore';
 import i18n, { initI18n } from '../i18n';
 import { removeVisitedNovels } from '../features/browse/sourceNovels';
 import { seedDefaultRepository } from '../plugins/pluginManager';
+import { errorLog } from '../services/deviceErrorLog';
+import { installErrorLog } from '../services/errorLog';
 
 /** Creates the default shelves on the very first launch only. */
 function seedDefaults(): void {
@@ -24,6 +26,7 @@ export type StartupResult = { ok: true } | { ok: false; error: unknown };
 
 /** Opens the database (running migrations), then loads the settings and the language. */
 export function startApp(): StartupResult {
+  installErrorLog(errorLog);
   try {
     openAppDatabase();
     const settings = loadSettings();
@@ -34,6 +37,7 @@ export function startApp(): StartupResult {
     removeVisitedNovels(getDb());
     return { ok: true };
   } catch (error) {
+    console.error('Startup failed', error);
     initI18n('system');
     return { ok: false, error };
   }

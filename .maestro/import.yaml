@@ -4,9 +4,11 @@ appId: com.redcodesnoo.lnbook
 - extendedWaitUntil:
     visible: 'Sample Saga, Ada Author.*'
     timeout: 60000
+- takeScreenshot: shot-library
 - tapOn: 'Sample Saga, Ada Author.*'
 - assertVisible: 'Ada Author'
 - assertVisible: '0 / 5 chapters'
+- takeScreenshot: shot-novel
 - scrollUntilVisible:
     element: '.*Chapter 4: End.*'
     direction: DOWN

@@ -9,9 +9,6 @@ export function MoreScreen({ navigation }: TabScreenProps<'more'>) {
   const { t } = useTranslation();
   const incognito = useSetting('incognito');
 
-  const soon = (titleKey: string, icon: string) => () =>
-    navigation.navigate('placeholder', { titleKey, icon });
-
   return (
     <Screen>
       <AppBar title={t('tabs.more')} large />
@@ -32,12 +29,12 @@ export function MoreScreen({ navigation }: TabScreenProps<'more'>) {
         <ListItem
           icon="chart-box-outline"
           title={t('more.statistics')}
-          onPress={soon('more.statistics', 'chart-box-outline')}
+          onPress={() => navigation.navigate('stats')}
         />
         <ListItem
           icon="format-quote-close"
           title={t('more.quotes')}
-          onPress={soon('more.quotes', 'format-quote-close')}
+          onPress={() => navigation.navigate('quotes')}
         />
         <Divider />
         <ListItem

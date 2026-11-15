@@ -48,6 +48,10 @@ export interface AppSettings {
   downloadWifiOnly: boolean;
   /** Milliseconds between two requests to the same site. */
   downloadDelayMs: number;
+  /** Folder EPUB exports are saved in (content:// address); empty = ask every time. */
+  exportFolder: string;
+  /** Download the new chapters of every followed novel (a novel can also ask for it alone). */
+  autoDownloadNew: boolean;
 
   // New chapters
   /** Hours between two background checks (6, 12 or 24); 0 = never. */
@@ -116,6 +120,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   downloadWifiOnly: false,
   downloadDelayMs: 1000,
+  exportFolder: '',
+  autoDownloadNew: false,
 
   updateCheckHours: 12,
   updateWifiOnly: false,

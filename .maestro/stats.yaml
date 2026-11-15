@@ -1,0 +1,38 @@
+# Runs after the reading flows: the statistics show the time read, the quotes of every
+# novel can be shared as an image, and the last settings screens open.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Statistics'
+- assertVisible: 'Total time'
+- assertVisible: 'Chapters read'
+- takeScreenshot: shot-stats
+- tapOn: '30 days'
+- scrollUntilVisible:
+    element: 'Novels by time spent'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'Sample Saga.*'
+    direction: DOWN
+- tapOn: 'Sample Saga.*'
+- assertVisible: 'Average per chapter'
+- tapOn: 'Back'
+- tapOn: 'Back'
+- tapOn: 'Quotes'
+- assertVisible: 'All 1'
+- longPressOn: '.*Prologue.*'
+- tapOn: 'Share as an image'
+- assertVisible: 'Paper'
+- tapOn: 'Night'
+- back
+- tapOn: 'Back'
+- tapOn: 'Settings'
+- tapOn: 'Advanced'
+- assertVisible: 'Clear the cookies'
+- assertVisible: 'Export the error log'
+- tapOn: 'Back'
+- tapOn: 'Back'
+- tapOn: 'About'
+- tapOn: 'Open source licences'
+- assertVisible: 'LNReader/lnreader-plugins'

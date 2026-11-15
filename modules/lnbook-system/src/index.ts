@@ -28,6 +28,8 @@ interface LnbookSystemModule {
   ): EventSubscription;
   addListener(event: 'onIncomingFiles', listener: () => void): EventSubscription;
   delay(ms: number): Promise<void>;
+  clearCookies(): Promise<boolean>;
+  resetApp(): boolean;
   downloadUpdate(url: string, name: string): Promise<DownloadedUpdate>;
   canInstallUpdates(): boolean;
   openInstallSettings(): void;
@@ -110,6 +112,16 @@ export function openInstallSettings(): void {
 /** Opens the Android installer on a file returned by `downloadUpdate`. */
 export function installUpdate(path: string): void {
   native.installUpdate(path);
+}
+
+/** Removes every cookie of the web view and of the requests made by the sources. */
+export function clearCookies(): Promise<boolean> {
+  return native.clearCookies();
+}
+
+/** Erases every data of the app; Android then closes it. */
+export function resetApp(): boolean {
+  return native.resetApp();
 }
 
 /**

@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 
 import { getDb } from '../../db/client';
 import { deviceFiles } from '../../services/deviceFileStore';
+import { getSetting, setSetting } from '../settings/settingsStore';
 import { exportNovelEpub, type ExportOptions } from './exportEpub';
 import { getNovel } from './novelRepository';
 
@@ -54,6 +55,16 @@ export async function exportNovelToDevice(
   }
   try {
     if (target === 'folder') {
+      // The folder chosen in the settings is used without asking, while it stays reachable.
+      const remembered = getSetting('exportFolder');
+      if (remembered) {
+        try {
+          new Directory(remembered).createFile(exported.fileName, EPUB_MIME).write(exported.data);
+          return { status: 'saved', missing: exported.missing };
+        } catch {
+          setSetting('exportFolder', '');
+        }
+      }
       let directory: Directory;
       try {
         directory = await Directory.pickDirectoryAsync();

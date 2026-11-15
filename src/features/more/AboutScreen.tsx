@@ -68,9 +68,8 @@ export function AboutScreen({ navigation }: RootScreenProps<'about'>) {
         <ListItem
           icon="license"
           title={t('about.licenses')}
-          onPress={() =>
-            navigation.navigate('placeholder', { titleKey: 'about.licenses', icon: 'license' })
-          }
+          subtitle={t('about.licensesHint')}
+          onPress={() => navigation.navigate('licenses')}
         />
       </ScrollView>
     </Screen>

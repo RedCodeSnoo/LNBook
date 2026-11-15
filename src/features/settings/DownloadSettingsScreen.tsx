@@ -1,15 +1,18 @@
+import { Directory } from 'expo-file-system';
 import { ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { RootScreenProps } from '../../app/navigation';
 import {
   AppBar,
+  IconButton,
   ListItem,
   RadioItem,
   Screen,
   SectionHeader,
   SwitchItem,
 } from '../../theme/components';
+import { folderLabel } from '../backup/backupService';
 import { setSetting, useSetting } from './settingsStore';
 
 const DELAYS = [500, 1000, 2000, 5000];
@@ -19,6 +22,8 @@ export function DownloadSettingsScreen({ navigation }: RootScreenProps<'settings
   const { t } = useTranslation();
   const wifiOnly = useSetting('downloadWifiOnly');
   const delay = useSetting('downloadDelayMs');
+  const exportFolder = useSetting('exportFolder');
+  const autoDownloadNew = useSetting('autoDownloadNew');
   return (
     <Screen bottom>
       <AppBar title={t('settings.downloads')} onBack={navigation.goBack} />
@@ -50,7 +55,34 @@ export function DownloadSettingsScreen({ navigation }: RootScreenProps<'settings
             onPress={() => setSetting('downloadDelayMs', value)}
           />
         ))}
-        <ListItem title={t('downloads.exportFolder')} subtitle={t('downloads.exportFolderHint')} />
+        <SectionHeader title={t('downloads.newChapters')} />
+        <SwitchItem
+          icon="download-circle-outline"
+          title={t('downloads.autoDownloadNew')}
+          subtitle={t('downloads.autoDownloadNewHint')}
+          value={autoDownloadNew}
+          onValueChange={(value) => setSetting('autoDownloadNew', value)}
+        />
+        <SectionHeader title={t('downloads.exportFolder')} />
+        <ListItem
+          icon="folder-outline"
+          title={exportFolder ? folderLabel(exportFolder) : t('downloads.exportFolderAsk')}
+          subtitle={t('downloads.exportFolderHint')}
+          onPress={() => {
+            void Directory.pickDirectoryAsync()
+              .then((directory) => setSetting('exportFolder', directory.uri))
+              .catch(() => undefined);
+          }}
+          right={
+            exportFolder ? (
+              <IconButton
+                icon="close"
+                label={t('downloads.exportFolderForget')}
+                onPress={() => setSetting('exportFolder', '')}
+              />
+            ) : undefined
+          }
+        />
       </ScrollView>
     </Screen>
   );

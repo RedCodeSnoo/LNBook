@@ -219,7 +219,12 @@
     "version": "Version",
     "repository": "GitHub repository",
     "licenses": "Open source licences",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "licensesHint": "LNReader source plugins (MIT) and the packages used",
+    "pluginsTitle": "Source plugins",
+    "pluginsLicense": "The sources come from the LNReader plugins project, used unchanged under the MIT licence. © LNReader contributors.",
+    "packages_one": "{{count}} open source package",
+    "packages_other": "{{count}} open source packages"
   },
   "errors": {
     "startupTitle": "The app could not start",
@@ -345,7 +350,12 @@
     "exportedPartial_one": "EPUB exported without {{count}} chapter that is not on the phone",
     "exportedPartial_other": "EPUB exported without {{count}} chapters that are not on the phone",
     "exportEmpty": "No chapter on the phone to export. Download them first.",
-    "exportFailed": "The EPUB could not be saved"
+    "exportFailed": "The EPUB could not be saved",
+    "exportChapters": "Chapters to export",
+    "exportAllChapters_one": "The whole novel ({{count}} chapter)",
+    "exportAllChapters_other": "The whole novel ({{count}} chapters)",
+    "exportRangeValue": "Chapters {{from}} to {{to}}",
+    "exportEverything": "The whole novel"
   },
   "categories": {
     "title": "Categories",
@@ -525,7 +535,17 @@
     "foldersEmptyMessage": "Folders are shared by every novel. A quote can be in several folders.",
     "colorNumber": "Colour {{number}}",
     "deleteFolderTitle": "Delete this folder?",
-    "deleteFolderMessage": "Its quotes are kept, they only lose this folder."
+    "deleteFolderMessage": "Its quotes are kept, they only lose this folder.",
+    "shareImage": "Share as an image",
+    "imageFailed": "The image could not be created",
+    "imageStyle": {
+      "paper": "Paper",
+      "night": "Night",
+      "ink": "Ink",
+      "frame": "Frame"
+    },
+    "allNovels": "All novels",
+    "emptyGlobal": "Select a passage while reading, then “Favourite quote”."
   },
   "sources": {
     "catalog": "Source catalogue",
@@ -636,7 +656,12 @@
     "delay": "Wait between two requests to a site",
     "delaySeconds": "{{seconds}} s",
     "exportFolder": "EPUB export folder",
-    "exportFolderHint": "Chosen at each export, from the page of the novel."
+    "exportFolderHint": "Chosen at each export, from the page of the novel.",
+    "newChapters": "New chapters",
+    "autoDownloadNew": "Download new chapters",
+    "autoDownloadNewHint": "For every followed novel. Can also be turned on for one novel from its page.",
+    "exportFolderAsk": "Ask every time",
+    "exportFolderForget": "Forget the export folder"
   },
   "appUpdate": {
     "available": "Version {{version}} available",
@@ -881,5 +906,72 @@
       "noText": "The text of the chapter is not on the phone",
       "failed": "The translation failed"
     }
+  },
+  "stats": {
+    "emptyTitle": "No reading time yet",
+    "emptyMessage": "Read or listen to a chapter: your statistics will appear here.",
+    "emptyNovelMessage": "Read or listen to a chapter of this novel to see its statistics.",
+    "totalTime": "Total time",
+    "readAndListened": "{{read}} reading · {{listened}} listening",
+    "reading": "Reading",
+    "listening": "Listening",
+    "chaptersRead": "Chapters read",
+    "wordsRead": "Words read",
+    "novelsStarted": "Novels started",
+    "novelsFinished": "Novels finished",
+    "quotes": "Quotes saved",
+    "speed": "Reading speed",
+    "wordsPerMinute_one": "{{count}} word/min",
+    "wordsPerMinute_other": "{{count}} words/min",
+    "timePerDay": "Time per day",
+    "period": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "12m": "12 months",
+      "all": "All"
+    },
+    "periodTotal": "{{time}} over the period",
+    "streaks": "Streaks",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "currentStreak": "Current streak",
+    "bestStreak": "Best streak",
+    "streakHint": "A day counts from 5 minutes of reading.",
+    "hours": "Favourite hours",
+    "hoursHint": "Time read at each hour of the day",
+    "ranking": "Novels by time spent",
+    "byLanguage": "By language read",
+    "originalLanguage": "Original text",
+    "translatedInto": "Translated into {{language}}",
+    "bySource": "By source",
+    "firstDay": "First day",
+    "lastDay": "Last day",
+    "averagePerChapter": "Average per chapter",
+    "remaining": "Estimated time left",
+    "timePerChapter": "Time per chapter"
+  },
+  "advanced": {
+    "userAgent": "User-Agent",
+    "userAgentSaved": "User-Agent saved",
+    "userAgentReset": "Default value",
+    "data": "Data",
+    "clearCookies": "Clear the cookies",
+    "clearCookiesHint": "Signs you out of the sites and forgets the Cloudflare checks",
+    "cookiesCleared": "Cookies cleared",
+    "clearCache": "Clear the cache",
+    "clearCacheHint": "Cached images and temporary files; your books are not touched",
+    "cacheCleared": "Cache cleared",
+    "exportLog": "Export the error log",
+    "exportLogHint": "A text file to share when something goes wrong",
+    "clearLog": "Empty the error log",
+    "logEmpty": "The error log is empty",
+    "logCleared": "Error log emptied",
+    "logFailed": "The error log could not be exported",
+    "danger": "Danger zone",
+    "reset": "Reset the app",
+    "resetHint": "Erases the library, the settings and every downloaded file",
+    "resetMessage": "Everything is erased from this phone: library, progress, quotes, statistics, downloads and settings. The app then closes. Make a backup first if you want to keep your data.",
+    "resetConfirm": "Erase everything",
+    "failed": "The action failed"
   }
 }

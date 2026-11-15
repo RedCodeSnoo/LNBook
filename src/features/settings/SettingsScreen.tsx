@@ -16,7 +16,8 @@ interface Group {
     | 'settingsDownloads'
     | 'settingsUpdates'
     | 'settingsVoice'
-    | 'settingsTranslation';
+    | 'settingsTranslation'
+    | 'settingsAdvanced';
 }
 
 const GROUPS: Group[] = [
@@ -29,7 +30,7 @@ const GROUPS: Group[] = [
   { key: 'downloads', icon: 'download-outline', route: 'settingsDownloads' },
   { key: 'updates', icon: 'bell-outline', route: 'settingsUpdates' },
   { key: 'sources', icon: 'puzzle-outline', route: 'settingsSources' },
-  { key: 'advanced', icon: 'wrench-outline' },
+  { key: 'advanced', icon: 'wrench-outline', route: 'settingsAdvanced' },
 ];
 
 export function SettingsScreen({ navigation }: RootScreenProps<'settings'>) {

@@ -174,6 +174,17 @@ export function getQuoteFolderIds(db: AppDatabase, id: number): number[] {
     .map((row) => row.folderId);
 }
 
+/** Novels that have quotes, with how many, by title. */
+export function listQuoteNovels(db: AppDatabase): { id: number; title: string; count: number }[] {
+  return db
+    .select({ id: novels.id, title: novels.title, count: sql<number>`count(*)` })
+    .from(quotes)
+    .innerJoin(novels, eq(novels.id, quotes.novelId))
+    .groupBy(novels.id)
+    .orderBy(asc(novels.title))
+    .all();
+}
+
 /** Quotes with their chapter, volume and folders, filtered and sorted. */
 export function listQuotes(db: AppDatabase, query: QuoteQuery = {}): QuoteView[] {
   const rows = db

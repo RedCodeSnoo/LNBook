@@ -219,7 +219,12 @@
     "version": "Version",
     "repository": "Dépôt GitHub",
     "licenses": "Licences open source",
-    "changelog": "Journal des modifications"
+    "changelog": "Journal des modifications",
+    "licensesHint": "Plugins de sources LNReader (MIT) et bibliothèques utilisées",
+    "pluginsTitle": "Plugins de sources",
+    "pluginsLicense": "Les sources viennent du projet de plugins LNReader, utilisés tels quels sous licence MIT. © Contributeurs de LNReader.",
+    "packages_one": "{{count}} bibliothèque open source",
+    "packages_other": "{{count}} bibliothèques open source"
   },
   "errors": {
     "startupTitle": "L'app n'a pas pu démarrer",
@@ -345,7 +350,12 @@
     "exportedPartial_one": "EPUB exporté sans {{count}} chapitre absent du téléphone",
     "exportedPartial_other": "EPUB exporté sans {{count}} chapitres absents du téléphone",
     "exportEmpty": "Aucun chapitre sur le téléphone à exporter. Télécharge-les d'abord.",
-    "exportFailed": "L'EPUB n'a pas pu être enregistré"
+    "exportFailed": "L'EPUB n'a pas pu être enregistré",
+    "exportChapters": "Chapitres à exporter",
+    "exportAllChapters_one": "Tout le novel ({{count}} chapitre)",
+    "exportAllChapters_other": "Tout le novel ({{count}} chapitres)",
+    "exportRangeValue": "Chapitres {{from}} à {{to}}",
+    "exportEverything": "Tout le novel"
   },
   "categories": {
     "title": "Catégories",
@@ -525,7 +535,17 @@
     "foldersEmptyMessage": "Les dossiers sont communs à tous les novels. Une citation peut être dans plusieurs dossiers.",
     "colorNumber": "Couleur {{number}}",
     "deleteFolderTitle": "Supprimer ce dossier ?",
-    "deleteFolderMessage": "Ses citations sont gardées, elles perdent seulement ce dossier."
+    "deleteFolderMessage": "Ses citations sont gardées, elles perdent seulement ce dossier.",
+    "shareImage": "Partager en image",
+    "imageFailed": "L'image n'a pas pu être créée",
+    "imageStyle": {
+      "paper": "Papier",
+      "night": "Nuit",
+      "ink": "Encre",
+      "frame": "Cadre"
+    },
+    "allNovels": "Tous les novels",
+    "emptyGlobal": "Sélectionne un passage en lisant, puis « Citation favorite »."
   },
   "sources": {
     "catalog": "Catalogue de sources",
@@ -636,7 +656,12 @@
     "delay": "Attente entre deux requêtes vers un site",
     "delaySeconds": "{{seconds}} s",
     "exportFolder": "Dossier d'export EPUB",
-    "exportFolderHint": "Choisi à chaque export, depuis la page du novel."
+    "exportFolderHint": "Choisi à chaque export, depuis la page du novel.",
+    "newChapters": "Nouveaux chapitres",
+    "autoDownloadNew": "Télécharger les nouveaux chapitres",
+    "autoDownloadNewHint": "Pour tous les novels suivis. Peut aussi s'activer pour un seul novel depuis sa page.",
+    "exportFolderAsk": "Demander à chaque fois",
+    "exportFolderForget": "Oublier le dossier d'export"
   },
   "appUpdate": {
     "available": "Version {{version}} disponible",
@@ -881,5 +906,72 @@
       "noText": "Le texte du chapitre n'est pas sur le téléphone",
       "failed": "La traduction a échoué"
     }
+  },
+  "stats": {
+    "emptyTitle": "Pas encore de temps de lecture",
+    "emptyMessage": "Lis ou écoute un chapitre : tes statistiques apparaîtront ici.",
+    "emptyNovelMessage": "Lis ou écoute un chapitre de ce novel pour voir ses statistiques.",
+    "totalTime": "Temps total",
+    "readAndListened": "{{read}} de lecture · {{listened}} d'écoute",
+    "reading": "Lecture",
+    "listening": "Écoute",
+    "chaptersRead": "Chapitres lus",
+    "wordsRead": "Mots lus",
+    "novelsStarted": "Novels commencés",
+    "novelsFinished": "Novels terminés",
+    "quotes": "Citations enregistrées",
+    "speed": "Vitesse de lecture",
+    "wordsPerMinute_one": "{{count}} mot/min",
+    "wordsPerMinute_other": "{{count}} mots/min",
+    "timePerDay": "Temps par jour",
+    "period": {
+      "7d": "7 jours",
+      "30d": "30 jours",
+      "12m": "12 mois",
+      "all": "Tout"
+    },
+    "periodTotal": "{{time}} sur la période",
+    "streaks": "Séries",
+    "days_one": "{{count}} jour",
+    "days_other": "{{count}} jours",
+    "currentStreak": "Série actuelle",
+    "bestStreak": "Record",
+    "streakHint": "Un jour compte à partir de 5 minutes de lecture.",
+    "hours": "Heures préférées",
+    "hoursHint": "Temps lu à chaque heure de la journée",
+    "ranking": "Œuvres par temps passé",
+    "byLanguage": "Par langue lue",
+    "originalLanguage": "Texte d'origine",
+    "translatedInto": "Traduit en {{language}}",
+    "bySource": "Par source",
+    "firstDay": "Premier jour",
+    "lastDay": "Dernier jour",
+    "averagePerChapter": "Moyenne par chapitre",
+    "remaining": "Temps restant estimé",
+    "timePerChapter": "Temps par chapitre"
+  },
+  "advanced": {
+    "userAgent": "User-Agent",
+    "userAgentSaved": "User-Agent enregistré",
+    "userAgentReset": "Valeur par défaut",
+    "data": "Données",
+    "clearCookies": "Effacer les cookies",
+    "clearCookiesHint": "Te déconnecte des sites et oublie les vérifications Cloudflare",
+    "cookiesCleared": "Cookies effacés",
+    "clearCache": "Vider le cache",
+    "clearCacheHint": "Images en cache et fichiers temporaires ; tes livres ne sont pas touchés",
+    "cacheCleared": "Cache vidé",
+    "exportLog": "Exporter le journal d'erreurs",
+    "exportLogHint": "Un fichier texte à partager quand quelque chose ne va pas",
+    "clearLog": "Vider le journal d'erreurs",
+    "logEmpty": "Le journal d'erreurs est vide",
+    "logCleared": "Journal d'erreurs vidé",
+    "logFailed": "Le journal d'erreurs n'a pas pu être exporté",
+    "danger": "Zone sensible",
+    "reset": "Réinitialiser l'app",
+    "resetHint": "Efface la bibliothèque, les réglages et tous les fichiers téléchargés",
+    "resetMessage": "Tout est effacé de ce téléphone : bibliothèque, progression, citations, statistiques, téléchargements et réglages. L'app se ferme ensuite. Fais d'abord une sauvegarde si tu veux garder tes données.",
+    "resetConfirm": "Tout effacer",
+    "failed": "L'action a échoué"
   }
 }

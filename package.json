@@ -75,6 +75,7 @@
     "react-native-gesture-handler": "~3.3.0",
     "react-native-safe-area-context": "~5.11.1",
     "react-native-screens": "~4.30.1",
+    "react-native-view-shot": "6.1.1",
     "react-native-webview": "14.0.1",
     "string_decoder": "^1.3.0",
     "urlencode": "^2.0.0",
