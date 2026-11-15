@@ -377,7 +377,7 @@
   },
   "reader": {
     "settings": "Reading settings",
-    "sectionText": "Text",
+    "sectionText": "Display",
     "sectionPage": "Page",
     "sectionScreen": "Screen",
     "theme": "Page theme",
@@ -428,7 +428,7 @@
     "orientationAuto": "Auto",
     "orientationPortrait": "Portrait",
     "orientationLandscape": "Landscape",
-    "footer": "Bottom of the screen",
+    "footer": "Bottom progress bar",
     "showProgress": "Progress in the chapter",
     "showClock": "Clock",
     "showBattery": "Battery",
@@ -503,7 +503,9 @@
     "quote": "Favourite quote",
     "quoteUnavailable": "This selection cannot be saved as a quote.",
     "loadingChapter": "Loading the chapter",
-    "toggleBars": "Show or hide the bars"
+    "toggleBars": "Show or hide the bars",
+    "footerHint": "The percentage of the chapter is always shown under the text. You can add:",
+    "displaySettings": "Display settings (theme, font, size, margins)"
   },
   "quotes": {
     "newTitle": "Favourite quote",

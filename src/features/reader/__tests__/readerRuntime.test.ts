@@ -8,6 +8,7 @@ import {
   themeAccents,
   type Anchor,
 } from '../readerHtml';
+import { footerFillPercent, footerProgressText } from '../readerFooter';
 import { DEFAULT_READER_SETTINGS, READER_THEMES } from '../readerSettings';
 import { contrastRatio } from '../../../theme/contrast';
 
@@ -248,8 +249,20 @@ describe('reader themes', () => {
       '--hyphens': 'auto',
       '--weight': '600',
       '--top': '40px',
-      '--bottom': '37px',
+      // The progress bar has its own band under the web view: the text never goes under it.
+      '--bottom': '15px',
     });
+  });
+
+  it('writes the bottom progress bar', () => {
+    expect(footerProgressText({ progress: 0.344, page: 0, pages: 0 })).toBe('34 %');
+    expect(footerProgressText({ progress: 0.5, page: 4, pages: 12 })).toBe('5 / 12 · 50 %');
+    expect(footerProgressText({ progress: 1.4, page: 20, pages: 12 })).toBe('12 / 12 · 100 %');
+    expect(footerProgressText({ progress: -1, page: 0, pages: 0 })).toBe('0 %');
+    expect(footerFillPercent(0.5)).toBe(50);
+    expect(footerFillPercent(0.1234)).toBe(12.3);
+    expect(footerFillPercent(2)).toBe(100);
+    expect(footerFillPercent(Number.NaN)).toBe(0);
   });
 
   it('parses stored anchors', () => {

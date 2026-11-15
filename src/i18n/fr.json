@@ -377,7 +377,7 @@
   },
   "reader": {
     "settings": "Réglages de lecture",
-    "sectionText": "Texte",
+    "sectionText": "Affichage",
     "sectionPage": "Page",
     "sectionScreen": "Écran",
     "theme": "Thème de page",
@@ -428,7 +428,7 @@
     "orientationAuto": "Auto",
     "orientationPortrait": "Portrait",
     "orientationLandscape": "Paysage",
-    "footer": "Bas de l'écran",
+    "footer": "Barre de progression du bas",
     "showProgress": "Progression dans le chapitre",
     "showClock": "Heure",
     "showBattery": "Batterie",
@@ -503,7 +503,9 @@
     "quote": "Citation favorite",
     "quoteUnavailable": "Cette sélection ne peut pas être enregistrée en citation.",
     "loadingChapter": "Chargement du chapitre",
-    "toggleBars": "Afficher ou masquer les barres"
+    "toggleBars": "Afficher ou masquer les barres",
+    "footerHint": "Le pourcentage du chapitre est toujours affiché sous le texte. Tu peux y ajouter :",
+    "displaySettings": "Réglages d'affichage (thème, police, taille, marges)"
   },
   "quotes": {
     "newTitle": "Citation favorite",

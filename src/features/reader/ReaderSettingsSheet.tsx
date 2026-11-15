@@ -284,6 +284,18 @@ export function ReaderSettingsForm({
             value={settings.semiBold}
             onValueChange={(semiBold) => onChange({ semiBold })}
           />
+          <Stepper
+            label={t('reader.marginHorizontal')}
+            value={settings.marginHorizontal}
+            {...READER_LIMITS.marginHorizontal}
+            onChange={(marginHorizontal) => onChange({ marginHorizontal })}
+          />
+          <Stepper
+            label={t('reader.marginVertical')}
+            value={settings.marginVertical}
+            {...READER_LIMITS.marginVertical}
+            onChange={(marginVertical) => onChange({ marginVertical })}
+          />
         </>
       ) : null}
 
@@ -340,18 +352,6 @@ export function ReaderSettingsForm({
               ) : null}
             </>
           )}
-          <Stepper
-            label={t('reader.marginHorizontal')}
-            value={settings.marginHorizontal}
-            {...READER_LIMITS.marginHorizontal}
-            onChange={(marginHorizontal) => onChange({ marginHorizontal })}
-          />
-          <Stepper
-            label={t('reader.marginVertical')}
-            value={settings.marginVertical}
-            {...READER_LIMITS.marginVertical}
-            onChange={(marginVertical) => onChange({ marginVertical })}
-          />
           <SwitchItem
             title={t('reader.volumeKeys')}
             subtitle={t('reader.volumeKeysHint')}
@@ -424,11 +424,9 @@ export function ReaderSettingsForm({
             ]}
           />
           <SectionHeader title={t('reader.footer')} />
-          <SwitchItem
-            title={t('reader.showProgress')}
-            value={settings.showProgress}
-            onValueChange={(showProgress) => onChange({ showProgress })}
-          />
+          <AppText variant="caption" secondary style={styles.footerHint}>
+            {t('reader.footerHint')}
+          </AppText>
           <SwitchItem
             title={t('reader.showClock')}
             value={settings.showClock}
@@ -524,6 +522,7 @@ export function ReaderSettingsForm({
 }
 
 const styles = StyleSheet.create({
+  footerHint: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xs },
   themes: { gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
   theme: {
     width: 76,

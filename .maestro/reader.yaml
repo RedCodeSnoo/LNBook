@@ -1,5 +1,5 @@
 # Runs after import.yaml: reads the first chapter, leaves, and comes back to the same place.
-# The footer of the reader ("12 %") is native: it tells that the chapter is displayed.
+# The progress bar of the reader ("12 %") is native: it tells that the chapter is displayed.
 appId: com.redcodesnoo.lnbook
 ---
 - launchApp
@@ -18,8 +18,9 @@ appId: com.redcodesnoo.lnbook
 - tapOn:
     point: '50%,50%'
 - assertVisible: 'Position in the chapter'
-- assertVisible: 'Reading settings'
-- tapOn: 'Reading settings'
+# The "Aa" button of the bottom bar opens the display settings.
+- assertVisible: 'Display settings.*'
+- tapOn: 'Display settings.*'
 - assertVisible: 'Page theme'
 - takeScreenshot: shot-reader-settings
 - tapOn: 'Sepia'
@@ -27,6 +28,8 @@ appId: com.redcodesnoo.lnbook
 - tapOn:
     point: '50%,40%'
 - assertNotVisible: 'Position in the chapter'
+# The progress bar stays under the text when the bars are hidden.
+- assertVisible: '[0-9]+ %'
 # Scroll, leave, and come back: the reader opens further than the beginning.
 - swipe:
     direction: UP

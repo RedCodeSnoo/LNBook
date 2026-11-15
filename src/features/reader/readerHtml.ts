@@ -135,8 +135,6 @@ export function settingsVars(
 ): Record<string, string> {
   const theme = findTheme(settings);
   const accents = themeAccents(theme);
-  // Room for the progress line at the bottom of the screen.
-  const footer = settings.showProgress || settings.showClock || settings.showBattery ? 22 : 0;
   return {
     '--bg': theme.background,
     '--fg': theme.text,
@@ -155,7 +153,8 @@ export function settingsVars(
     '--indent': `${settings.textIndent}em`,
     '--mh': `${settings.marginHorizontal}px`,
     '--top': `${settings.marginVertical + insets.top}px`,
-    '--bottom': `${settings.marginVertical + insets.bottom + footer}px`,
+    // The progress bar has its own band under the web view: nothing to leave here.
+    '--bottom': `${settings.marginVertical + insets.bottom}px`,
     '--align': settings.textAlign,
     '--hyphens': settings.textAlign === 'justify' ? 'auto' : 'manual',
     '--weight': settings.semiBold ? '600' : '400',

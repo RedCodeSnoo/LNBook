@@ -17,6 +17,7 @@ import type { Chapter } from '../../db/schema';
 import { deviceFiles } from '../../services/deviceFileStore';
 import { novelCssFile, novelDir } from '../../services/fileStore';
 import { formatPercent, formatTime } from '../../services/format';
+import { footerFillPercent, footerProgressText, READER_FOOTER_HEIGHT } from './readerFooter';
 import {
   AppBar,
   AppText,
@@ -154,8 +155,9 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
   );
 
   const insets: ReaderInsets = useMemo(
-    () => ({ top: safeInsets.top, bottom: safeInsets.bottom }),
-    [safeInsets.top, safeInsets.bottom],
+    // The bottom inset belongs to the progress bar under the web view.
+    () => ({ top: safeInsets.top, bottom: 0 }),
+    [safeInsets.top],
   );
   const pageTheme = findTheme(settings);
   const pageIsDark = relativeLuminance(pageTheme.background) < 0.4;
@@ -812,7 +814,6 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
 
   const chromeVisible = barsVisible || searching;
   const immersive = settings.hideStatusBar && !chromeVisible;
-  const footerVisible = settings.showProgress || settings.showClock || settings.showBattery;
 
   return (
     <View style={[styles.screen, { backgroundColor: pageTheme.background }]}>
@@ -877,30 +878,23 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
         </Pressable>
       )}
 
+      {document ? (
+        <ReaderFooter
+          progress={progress}
+          showClock={settings.showClock}
+          clock={clock}
+          showBattery={settings.showBattery}
+          background={pageTheme.background}
+          color={pageTheme.text}
+          bottomInset={safeInsets.bottom}
+        />
+      ) : null}
+
       {settings.warmth > 0 ? (
         <View
           pointerEvents="none"
           style={[styles.overlay, { backgroundColor: `rgba(255, 138, 20, ${settings.warmth})` }]}
         />
-      ) : null}
-
-      {footerVisible && document && !chromeVisible ? (
-        <View
-          pointerEvents="none"
-          style={[styles.footer, { paddingBottom: safeInsets.bottom + 4 }]}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <FooterText color={pageTheme.text}>{settings.showClock ? clock : ''}</FooterText>
-          <FooterText color={pageTheme.text}>
-            {settings.showProgress
-              ? progress.pages > 0
-                ? `${progress.page + 1} / ${progress.pages} · ${formatPercent(progress.progress)}`
-                : formatPercent(progress.progress)
-              : ''}
-          </FooterText>
-          {settings.showBattery ? <BatteryText color={pageTheme.text} /> : <FooterText />}
-        </View>
       ) : null}
 
       {searching ? (
@@ -1128,18 +1122,32 @@ export function ReaderScreen({ navigation, route }: RootScreenProps<'reader'>) {
                 onPress={() => (ttsActive ? stopReadingAloud() : startVoice('position'))}
                 onLongPress={() => startVoice('start')}
               />
-              <IconButton
-                icon="format-size"
-                label={t('reader.settings')}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('reader.displaySettings')}
                 onPress={() => setPanel('settings')}
-              />
+                android_ripple={{ color: appTheme.colors.ripple, borderless: false }}
+                style={[styles.aa, { backgroundColor: appTheme.colors.primaryContainer }]}
+              >
+                <AppText
+                  variant="subtitle"
+                  color={appTheme.colors.onPrimaryContainer}
+                  style={styles.aaText}
+                >
+                  Aa
+                </AppText>
+              </Pressable>
             </View>
           </View>
         </>
       ) : null}
 
       {ttsActive && !searching ? (
-        <TtsBar bottom={safeInsets.bottom + (barsVisible ? 56 + SPACING.md : SPACING.xl)} />
+        <TtsBar
+          bottom={
+            safeInsets.bottom + (barsVisible ? 56 + SPACING.md : READER_FOOTER_HEIGHT + SPACING.sm)
+          }
+        />
       ) : null}
 
       <ReaderSettingsSheet
@@ -1314,9 +1322,68 @@ function useKeyedState<T>(key: string, initial: T): [T, (value: T) => void] {
   return [state.key === key ? state.value : initial, set];
 }
 
-function FooterText({ color, children }: { color?: string; children?: string }) {
+/**
+ * Band under the text, in the colours of the page: percentage of the chapter (and page),
+ * thin progress line, optionally the time and the battery. The text never goes under it.
+ */
+function ReaderFooter({
+  progress,
+  showClock,
+  clock,
+  showBattery,
+  background,
+  color,
+  bottomInset,
+}: {
+  progress: { progress: number; page: number; pages: number };
+  showClock: boolean;
+  clock: string;
+  showBattery: boolean;
+  background: string;
+  color: string;
+  bottomInset: number;
+}) {
+  const text = footerProgressText(progress);
   return (
-    <AppText variant="caption" color={color} style={styles.footerText} numberOfLines={1}>
+    <View style={[styles.footer, { backgroundColor: background, paddingBottom: bottomInset }]}>
+      <View style={styles.footerTrack}>
+        <View style={[StyleSheet.absoluteFill, styles.footerRail, { backgroundColor: color }]} />
+        <View
+          style={[
+            styles.footerFill,
+            { backgroundColor: color, width: `${footerFillPercent(progress.progress)}%` },
+          ]}
+        />
+      </View>
+      <View style={styles.footerRow}>
+        <FooterText color={color} align="left">
+          {showClock ? clock : ''}
+        </FooterText>
+        <AppText variant="label" color={color} style={styles.footerPercent} numberOfLines={1}>
+          {text}
+        </AppText>
+        {showBattery ? <BatteryText color={color} /> : <FooterText align="right" />}
+      </View>
+    </View>
+  );
+}
+
+function FooterText({
+  color,
+  children,
+  align = 'center',
+}: {
+  color?: string;
+  children?: string;
+  align?: 'left' | 'center' | 'right';
+}) {
+  return (
+    <AppText
+      variant="caption"
+      color={color}
+      style={[styles.footerText, { textAlign: align }]}
+      numberOfLines={1}
+    >
       {children ?? ''}
     </AppText>
   );
@@ -1325,7 +1392,11 @@ function FooterText({ color, children }: { color?: string; children?: string }) 
 /** Separate component: the battery is only watched when it is displayed. */
 function BatteryText({ color }: { color: string }) {
   const level = useBatteryLevel();
-  return <FooterText color={color}>{level >= 0 ? `${Math.round(level * 100)} %` : ''}</FooterText>;
+  return (
+    <FooterText color={color} align="right">
+      {level >= 0 ? `${Math.round(level * 100)} %` : ''}
+    </FooterText>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -1333,17 +1404,29 @@ const styles = StyleSheet.create({
   web: { flex: 1 },
   loading: { padding: SPACING.xl, gap: SPACING.md },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+  footer: { minHeight: READER_FOOTER_HEIGHT },
+  footerTrack: { height: 3 },
+  footerRail: { opacity: 0.15 },
+  footerFill: { height: 3, opacity: 0.7 },
+  footerRow: {
+    height: READER_FOOTER_HEIGHT - 3,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.lg,
-    opacity: 0.6,
   },
-  footerText: { flex: 1, fontSize: 11, lineHeight: 14, textAlign: 'center' },
+  footerText: { flex: 1, fontSize: 12, lineHeight: 16 },
+  footerPercent: { flex: 1, textAlign: 'center', fontSize: 14, lineHeight: 18 },
+  aa: {
+    minWidth: 44,
+    height: 40,
+    marginHorizontal: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  aaText: { fontSize: 18, lineHeight: 22 },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, elevation: 4 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, elevation: 8 },
   barRow: {
