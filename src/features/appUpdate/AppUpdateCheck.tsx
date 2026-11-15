@@ -72,12 +72,12 @@ export function AppUpdateCheck({ onChecked }: { onChecked?: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  // Stacked: on a narrow screen, a row would squeeze the result into a thin column.
   box: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
   },
-  texts: { flex: 1, gap: 2 },
+  texts: { alignSelf: 'stretch', gap: 2 },
 });
