@@ -22,10 +22,11 @@ SAVED_TABLES = [
     'novel_categories', 'reading_sessions', 'history', 'quote_folders', 'quotes',
     'quote_folder_items', 'plugins', 'plugin_repos', 'text_replacements', 'settings',
 ]
-# Written by the app itself at launch (update checks, automatic backups).
-VOLATILE_SETTING = re.compile(r'(^last|At$|Check)', re.I)
-# Files the app rewrites on its own; everything else must be identical.
-VOLATILE_FILE = re.compile(r'^(logs|backups|\.backup-work)/')
+# Written by the app itself at launch (update checks, version seen, automatic backups).
+VOLATILE_SETTING = re.compile(r'(^last|At$|Check|LastSeenVersion$)', re.I)
+# Files rewritten on their own (journal, safety backups, and the ART profile files that
+# Android's profile installer writes after each update); everything else must be identical.
+VOLATILE_FILE = re.compile(r'^(logs/|backups/|\.backup-work/|profileinstaller_|profileInstalled$)')
 SAVED_FILE = re.compile(r'^(novels|plugins|fonts)/')
 
 
