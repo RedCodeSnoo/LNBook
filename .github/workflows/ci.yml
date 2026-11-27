@@ -186,14 +186,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=$(gh release view --json tagName -q .tagName)
-          gh release download "$TAG" -p '*.apk' -D "$RUNNER_TEMP/published"
-          (cd "$RUNNER_TEMP/published" && gh release download "$TAG" -p '*.apk.sha256' && sha256sum -c ./*.sha256)
+          TAG=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.apk' -p '*.apk.sha256' -D "$RUNNER_TEMP/published"
+          (cd "$RUNNER_TEMP/published" && sha256sum -c ./*.sha256)
           VERSION="${TAG#v}"
           NEXT="${VERSION%.*}.$(( ${VERSION##*.} + 1 ))"
           echo "apk=$(ls "$RUNNER_TEMP"/published/*.apk)" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Published $TAG, this build is $NEXT"
+
+      # The published APK is ARM only. If the emulator cannot run it, the test falls back to
+      # the same version built from its tag for x86_64, with the same key.
+      - name: Switch to the published version
+        env:
+          TAG: ${{ steps.published.outputs.tag }}
+        run: git fetch --depth=1 origin tag "$TAG" && git checkout -q "$TAG"
+
+      - name: Build the published version for x86_64
+        id: old-apk
+        uses: ./.github/actions/build-apk
+        with:
+          version: ${{ steps.published.outputs.version }}
+          architectures: x86_64
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Keep it and switch back
+        env:
+          OLD_APK: ${{ steps.old-apk.outputs.apk-path }}
+        run: |
+          cp "$OLD_APK" "$RUNNER_TEMP/published-x86_64.apk"
+          git checkout -q "$GITHUB_SHA"
 
       # Same signature as the releases, and a higher version: an update, not a new app.
       - name: Build x86_64 APK signed with the release key
@@ -231,7 +258,7 @@ jobs:
           disk-size: 8192M
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: scripts/ci-upgrade.sh "$OLD_APK" "$NEW_APK" upgrade-results
+          script: scripts/ci-upgrade.sh "$OLD_APK" "$NEW_APK" upgrade-results "$RUNNER_TEMP/published-x86_64.apk"
 
       - uses: actions/upload-artifact@v7
         if: always()

@@ -5,12 +5,13 @@
 # and every file is unchanged, then makes a backup with the new version and checks it on
 # the computer.
 #
-# Usage: scripts/ci-upgrade.sh <published.apk> <new.apk> <results dir>
+# Usage: scripts/ci-upgrade.sh <published.apk> <new.apk> <results dir> [published version built for x86_64]
 set -uo pipefail
 
 OLD_APK="$1"
 NEW_APK="$2"
 OUT="$3"
+OLD_FALLBACK="${4:-}"
 PKG=com.redcodesnoo.lnbook
 mkdir -p "$OUT"
 failed=()
@@ -28,9 +29,18 @@ backup_log() {
 }
 
 echo "::group::Published version: install and build the library"
-adb install "$OLD_APK" || { echo "::error::Cannot install the published APK"; exit 1; }
+if ! adb install "$OLD_APK"; then
+  echo "::warning::The emulator cannot install the published ARM APK: using the same version built from its tag for x86_64"
+  adb install "$OLD_FALLBACK" || { echo "::error::Cannot install the published version"; exit 1; }
+fi
+launch 30
+if [ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]; then
+  echo "::warning::The published ARM APK does not start on the emulator: using the same version built from its tag for x86_64"
+  adb uninstall "$PKG"
+  adb install "$OLD_FALLBACK" || { echo "::error::Cannot install the published version"; exit 1; }
+  launch 20
+fi
 adb shell dumpsys package "$PKG" | grep -E "versionName|versionCode|primaryCpuAbi" | tee "$OUT/old-version.txt"
-launch 20
 node scripts/make-sample-epub.js "$OUT/sample.epub"
 scripts/ci-open-sample.sh "$OUT/sample.epub"
 maestro test -e TITLE='Sample Saga' .maestro/upgrade/wait-book.yaml || failed+=("import sample")
