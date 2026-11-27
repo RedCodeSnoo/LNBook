@@ -19,3 +19,17 @@ dependencies {
   // On-device translation; language models are downloaded on demand.
   implementation "com.google.mlkit:translate:17.0.3"
 }
+
+dependencies {
+  // Unit tests of the backup archives, on the computer (`gradlew :lnbook-system:testReleaseUnitTest`).
+  testImplementation "junit:junit:4.13.2"
+}
+
+android {
+  testOptions {
+    unitTests.all {
+      // A small heap proves that backups are streamed, never held in memory.
+      maxHeapSize = "64m"
+    }
+  }
+}

@@ -5,11 +5,11 @@ import { useTranslation } from 'react-i18next';
 import type { RootScreenProps } from '../../app/navigation';
 import { useDataVersion } from '../../db/invalidation';
 import i18n from '../../i18n';
-import { formatDate, formatTime } from '../../services/format';
+import { formatBytes, formatDate, formatTime } from '../../services/format';
 import {
   AppBar,
   AppText,
-  CheckItem,
+  Button,
   Dialog,
   ListItem,
   RadioItem,
@@ -22,19 +22,30 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { SPACING } from '../../theme/typography';
 import { setSetting, useSetting } from '../settings/settingsStore';
 import type { AutoBackupFrequency, BackupContent } from './backupFile';
+import { backupErrorText, isCancelled } from './backupErrors';
 import {
+  cancelBackupWork,
   chooseAutoBackupFolder,
   createManualBackup,
+  describeError,
   didLastAutoBackupFail,
+  discardPickedBackup,
   folderLabel,
   getLastAutoBackupAt,
+  getRestoreSafetyBackup,
   importLnReader,
   installSources,
+  openRestoreSafetyBackup,
   pickBackupFile,
   restoreBackup,
   runAutoBackupIfDue,
+  shareRestoreSafetyBackup,
+  useBackupProgress,
+  type PickedBackup,
+  type SavedBackup,
 } from './backupService';
 import type { IgnoredItem, LnReaderImportSummary } from './lnreaderImport';
+import type { RestoreSummary } from './restore';
 
 const FREQUENCIES: AutoBackupFrequency[] = ['off', 'daily', 'weekly'];
 
@@ -43,7 +54,11 @@ type Pending =
   | { kind: 'create' }
   | { kind: 'restore'; name: string; content: BackupContent }
   | { kind: 'lnreader'; name: string; data: Uint8Array }
-  | { kind: 'lnreaderDone'; summary: LnReaderImportSummary };
+  | { kind: 'lnreaderDone'; summary: LnReaderImportSummary }
+  | { kind: 'created'; saved: SavedBackup }
+  | { kind: 'restored'; summary: RestoreSummary; mode: 'replace' | 'merge' }
+  | { kind: 'failed'; title: string; message: string; detail: string }
+  | { kind: 'safety' };
 
 /** Plus → Backup and restore. */
 export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
@@ -55,12 +70,27 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
   const dateFormat = useSetting('dateFormat');
   const [pending, setPending] = useState<Pending>({ kind: 'none' });
   const [busy, setBusy] = useState(false);
-  const [includeChapters, setIncludeChapters] = useState(true);
-  const [includeTranslations, setIncludeTranslations] = useState(true);
   const [stamp, setStamp] = useState(0);
+  const progress = useBackupProgress();
   useDataVersion('library');
 
   const close = () => setPending({ kind: 'none' });
+  const closeRestore = () => {
+    if (pending.kind === 'restore') {
+      discardPickedBackup(pending.content);
+    }
+    close();
+  };
+  /** Shows the real cause and keeps the whole error in the journal (Settings → Advanced). */
+  const fail = (title: string, context: string, error: unknown) => {
+    console.error(context, describeError(error), error);
+    if (isCancelled(error)) {
+      showToast(t('backup.errors.cancelled'));
+      return;
+    }
+    const text = backupErrorText(error, t);
+    setPending({ kind: 'failed', title, message: text.message, detail: text.detail });
+  };
   const run = async (work: () => Promise<void>) => {
     setBusy(true);
     try {
@@ -74,39 +104,42 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
   const create = (target: 'folder' | 'share') => {
     close();
     void run(async () => {
-      const outcome = await createManualBackup(target, { includeChapters, includeTranslations });
-      if (outcome === 'saved') {
-        showToast(t('backup.saved'));
-      } else if (outcome === 'failed') {
-        showToast(t('backup.failed'));
+      try {
+        const saved = await createManualBackup(target);
+        if (saved) {
+          setPending({ kind: 'created', saved });
+        }
+      } catch (error) {
+        fail(t('backup.failed'), 'Backup failed', error);
       }
     });
   };
 
+  const opened = (picked: PickedBackup) => {
+    if (picked.kind === 'cancelled') {
+      return;
+    }
+    // Whatever entry was used, the file decides what happens.
+    setPending(
+      picked.kind === 'lnbook'
+        ? { kind: 'restore', name: picked.name, content: picked.content }
+        : { kind: 'lnreader', name: picked.name, data: picked.data },
+    );
+  };
+
   const pick = (expected: 'lnbook' | 'lnreader') => {
     void run(async () => {
-      const picked = await pickBackupFile();
-      if (picked.kind === 'cancelled') {
-        return;
+      try {
+        opened(await pickBackupFile());
+      } catch (error) {
+        if (error instanceof Error && error.name === 'NotABackupError') {
+          showToast(
+            expected === 'lnreader' ? t('backup.errorNotLnReader') : t('backup.errorNotBackup'),
+          );
+          return;
+        }
+        fail(t('backup.openFailed'), 'Cannot open the backup', error);
       }
-      if (picked.kind === 'error') {
-        showToast(
-          picked.reason === 'tooRecent'
-            ? t('backup.errorTooRecent')
-            : picked.reason === 'notBackup'
-              ? expected === 'lnreader'
-                ? t('backup.errorNotLnReader')
-                : t('backup.errorNotBackup')
-              : t('backup.errorCorrupted'),
-        );
-        return;
-      }
-      // Whatever entry was used, the file decides what happens.
-      setPending(
-        picked.kind === 'lnbook'
-          ? { kind: 'restore', name: picked.name, content: picked.content }
-          : { kind: 'lnreader', name: picked.name, data: picked.data },
-      );
     });
   };
 
@@ -115,14 +148,31 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
     void run(async () => {
       try {
         const summary = await restoreBackup(content, mode);
-        showToast(
-          mode === 'replace'
-            ? t('backup.restored', { count: summary.novelsAdded })
-            : t('backup.merged', { added: summary.novelsAdded, updated: summary.novelsUpdated }),
-        );
+        setPending({ kind: 'restored', summary, mode });
       } catch (error) {
-        console.warn('Restore failed', error);
-        showToast(t('backup.restoreFailed'));
+        fail(t('backup.restoreFailed'), 'Restore failed', error);
+      }
+    });
+  };
+
+  const undoLastRestore = () => {
+    close();
+    void run(async () => {
+      try {
+        opened(await openRestoreSafetyBackup());
+      } catch (error) {
+        fail(t('backup.openFailed'), 'Cannot open the safety backup', error);
+      }
+    });
+  };
+
+  const shareSafety = () => {
+    close();
+    void run(async () => {
+      try {
+        await shareRestoreSafetyBackup();
+      } catch (error) {
+        fail(t('backup.failed'), 'Cannot share the safety backup', error);
       }
     });
   };
@@ -133,8 +183,7 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
       try {
         setPending({ kind: 'lnreaderDone', summary: await importLnReader(data) });
       } catch (error) {
-        console.warn('LNReader import failed', error);
-        showToast(t('backup.restoreFailed'));
+        fail(t('backup.restoreFailed'), 'LNReader import failed', error);
       }
     });
   };
@@ -168,6 +217,13 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
   };
 
   const lastAuto = getLastAutoBackupAt();
+  const safety = getRestoreSafetyBackup();
+  const counts = (content: BackupContent) =>
+    content.manifest.counts ?? {
+      novels: content.tables.novels.length,
+      chapters: content.tables.chapters.length,
+      quotes: content.tables.quotes.length,
+    };
   const autoFailed = didLastAutoBackupFail();
   const ignoredLabel = (item: IgnoredItem) =>
     'name' in item
@@ -177,6 +233,58 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
   return (
     <Screen bottom>
       <AppBar title={t('more.backup')} onBack={navigation.goBack} />
+      {progress.step ? (
+        <View
+          style={[styles.progress, { backgroundColor: colors.surfaceVariant }]}
+          accessibilityLiveRegion="polite"
+        >
+          <View style={styles.progressRow}>
+            <ActivityIndicator color={colors.primary as string} />
+            <AppText variant="bodyStrong" style={styles.flex}>
+              {t(`backup.step.${progress.step}`)}
+            </AppText>
+            {progress.step !== 'restoring' && progress.step !== 'preparing' ? (
+              <Button
+                label={t('common.cancel')}
+                variant="text"
+                compact
+                onPress={cancelBackupWork}
+              />
+            ) : null}
+          </View>
+          {progress.totalBytes > 0 ? (
+            <View
+              style={[styles.track, { backgroundColor: colors.border }]}
+              accessibilityRole="progressbar"
+              accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: Math.round((progress.bytes / progress.totalBytes) * 100),
+              }}
+            >
+              <View
+                style={[
+                  styles.fill,
+                  {
+                    backgroundColor: colors.primary as string,
+                    width: `${Math.min(100, (progress.bytes / progress.totalBytes) * 100)}%`,
+                  },
+                ]}
+              />
+            </View>
+          ) : null}
+          <AppText variant="caption" secondary>
+            {progress.totalBytes > 0
+              ? t('backup.progressBytes', {
+                  done: formatBytes(progress.bytes),
+                  total: formatBytes(progress.totalBytes),
+                })
+              : progress.bytes > 0
+                ? formatBytes(progress.bytes)
+                : t('backup.working')}
+          </AppText>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={styles.list} key={stamp}>
         <SectionHeader title={t('backup.manual')} />
         <ListItem
@@ -193,6 +301,19 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
           disabled={busy}
           onPress={() => pick('lnbook')}
         />
+        {safety ? (
+          <ListItem
+            icon="history"
+            title={t('backup.safetyTitle')}
+            subtitle={t('backup.safetyHint', {
+              date: formatDate(safety.date, dateFormat, i18n.language),
+              time: formatTime(safety.date),
+              size: formatBytes(safety.size),
+            })}
+            disabled={busy}
+            onPress={() => setPending({ kind: 'safety' })}
+          />
+        ) : null}
 
         <SectionHeader title={t('backup.automatic')} />
         {FREQUENCIES.map((value) => (
@@ -242,7 +363,7 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
           disabled={busy}
           onPress={() => pick('lnreader')}
         />
-        {busy ? (
+        {busy && !progress.step ? (
           <View style={styles.busy}>
             <ActivityIndicator color={colors.primary as string} />
             <AppText secondary>{t('backup.working')}</AppText>
@@ -260,27 +381,106 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
           { label: t('backup.saveToFolder'), onPress: () => create('folder') },
         ]}
       >
-        <AppText secondary>{t('backup.contentHint')}</AppText>
-        <CheckItem
-          title={t('backup.includeChapters')}
-          subtitle={t('backup.includeChaptersHint')}
-          checked={includeChapters}
-          onPress={() => setIncludeChapters((value) => !value)}
-        />
-        <CheckItem
-          title={t('backup.includeTranslations')}
-          checked={includeTranslations}
-          onPress={() => setIncludeTranslations((value) => !value)}
-        />
+        <AppText>{t('backup.contentFull')}</AppText>
+        <AppText secondary style={styles.gap}>
+          {t('backup.contentHint')}
+        </AppText>
+        <AppText secondary style={styles.gap}>
+          {t('backup.targetHint')}
+        </AppText>
       </Dialog>
+
+      {pending.kind === 'created' ? (
+        <Dialog
+          visible
+          title={t('backup.createdTitle')}
+          onClose={close}
+          actions={[{ label: t('common.close'), onPress: close }]}
+        >
+          <AppText variant="bodyStrong">{pending.saved.name}</AppText>
+          <AppText>
+            {t('backup.createdSize', { size: formatBytes(pending.saved.backup.size) })}
+          </AppText>
+          <AppText secondary style={styles.gap}>
+            {t('backup.createdCounts', {
+              novels: pending.saved.backup.manifest.counts?.novels ?? 0,
+              chapters: pending.saved.backup.manifest.counts?.chapters ?? 0,
+              quotes: pending.saved.backup.manifest.counts?.quotes ?? 0,
+              files: pending.saved.backup.manifest.counts?.files ?? 0,
+            })}
+          </AppText>
+          <AppText secondary style={styles.gap}>
+            {pending.saved.outcome === 'saved'
+              ? t('backup.createdVerified')
+              : t('backup.createdShared')}
+          </AppText>
+          {pending.saved.backup.missing.length > 0 ? (
+            <AppText secondary style={styles.gap}>
+              {t('backup.createdMissing', { count: pending.saved.backup.missing.length })}
+            </AppText>
+          ) : null}
+        </Dialog>
+      ) : null}
+
+      {pending.kind === 'restored' ? (
+        <Dialog
+          visible
+          title={t('backup.restoredTitle')}
+          onClose={close}
+          actions={[{ label: t('common.close'), onPress: close }]}
+        >
+          <AppText>
+            {pending.mode === 'replace'
+              ? t('backup.restored', { count: pending.summary.novelsAdded })
+              : t('backup.merged', {
+                  added: pending.summary.novelsAdded,
+                  updated: pending.summary.novelsUpdated,
+                })}
+          </AppText>
+          <AppText secondary style={styles.gap}>
+            {t('backup.restoredSafety')}
+          </AppText>
+        </Dialog>
+      ) : null}
+
+      {pending.kind === 'failed' ? (
+        <Dialog
+          visible
+          title={pending.title}
+          onClose={close}
+          actions={[{ label: t('common.close'), onPress: close }]}
+        >
+          <AppText>{pending.message}</AppText>
+          <AppText variant="caption" secondary style={styles.gap} selectable>
+            {t('backup.errorDetail', { detail: pending.detail })}
+          </AppText>
+          <AppText variant="caption" secondary style={styles.gap}>
+            {t('backup.errorJournal')}
+          </AppText>
+        </Dialog>
+      ) : null}
+
+      {pending.kind === 'safety' && safety ? (
+        <Dialog
+          visible
+          title={t('backup.safetyTitle')}
+          message={t('backup.safetyExplain')}
+          onClose={close}
+          actions={[
+            { label: t('common.cancel'), onPress: close },
+            { label: t('backup.share'), onPress: shareSafety },
+            { label: t('backup.safetyRestore'), onPress: undoLastRestore },
+          ]}
+        />
+      ) : null}
 
       {pending.kind === 'restore' ? (
         <Dialog
           visible
           title={t('backup.restore')}
-          onClose={close}
+          onClose={closeRestore}
           actions={[
-            { label: t('common.cancel'), onPress: close },
+            { label: t('common.cancel'), onPress: closeRestore },
             { label: t('backup.merge'), onPress: () => restore(pending.content, 'merge') },
             {
               label: t('backup.replace'),
@@ -294,8 +494,19 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
             {t('backup.fileInfo', {
               date: formatDate(pending.content.manifest.createdAt, dateFormat, i18n.language),
               version: pending.content.manifest.appVersion,
-              count: pending.content.tables.novels.length,
+              count: counts(pending.content).novels,
             })}
+          </AppText>
+          <AppText secondary>
+            {t('backup.fileCounts', {
+              chapters: counts(pending.content).chapters,
+              quotes: counts(pending.content).quotes,
+            })}
+          </AppText>
+          <AppText secondary>
+            {pending.content.manifest.checksums
+              ? t('backup.fileChecked')
+              : t('backup.fileOldFormat')}
           </AppText>
           {!pending.content.manifest.includesChapters ? (
             <AppText secondary>{t('backup.noChaptersInside')}</AppText>
@@ -304,6 +515,9 @@ export function BackupScreen({ navigation }: RootScreenProps<'backup'>) {
             {t('backup.mergeHint')}
           </AppText>
           <AppText secondary>{t('backup.replaceHint')}</AppText>
+          <AppText secondary style={styles.gap}>
+            {t('backup.safetyBefore')}
+          </AppText>
         </Dialog>
       ) : null}
 
@@ -386,4 +600,15 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   gap: { marginTop: SPACING.md },
+  flex: { flex: 1 },
+  progress: {
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: 12,
+  },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3 },
 });

@@ -174,3 +174,10 @@ export {
 } from './tts';
 
 export { nativeTranslate } from './translate';
+
+export {
+  nativeBackup,
+  type NativeBackupProgress,
+  type NativeZipEntry,
+  type NativeZipListing,
+} from './backup';

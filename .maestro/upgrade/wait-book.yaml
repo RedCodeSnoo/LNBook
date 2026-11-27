@@ -1,0 +1,6 @@
+# Waits until a book opened with "Open with" is in the library. Usage: -e TITLE=...
+appId: com.redcodesnoo.lnbook
+---
+- extendedWaitUntil:
+    visible: '${TITLE}.*'
+    timeout: 300000

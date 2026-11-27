@@ -4,7 +4,8 @@
     "modules": [
       "expo.modules.lnbooksystem.LnbookSystemModule",
       "expo.modules.lnbooksystem.LnbookTtsModule",
-      "expo.modules.lnbooksystem.LnbookTranslateModule"
+      "expo.modules.lnbooksystem.LnbookTranslateModule",
+      "expo.modules.lnbooksystem.LnbookBackupModule"
     ]
   }
 }

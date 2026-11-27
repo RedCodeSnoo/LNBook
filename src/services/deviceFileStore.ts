@@ -1,5 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 
+import { nativeBackup } from '../../modules/lnbook-system';
 import type { FileStore } from './fileStore';
 
 function parentOf(path: string): string {
@@ -58,6 +59,17 @@ class DeviceFileStore implements FileStore {
 
   exists(path: string): boolean {
     return Paths.info(this.uri(path)).exists;
+  }
+
+  isFile(path: string): boolean {
+    const info = Paths.info(this.uri(path));
+    return info.exists && !info.isDirectory;
+  }
+
+  move(from: string, to: string): void {
+    // Folders known to exist may have moved away: they are checked again on next write.
+    this.knownDirectories.clear();
+    nativeBackup.movePath(from, to);
   }
 
   delete(path: string): void {

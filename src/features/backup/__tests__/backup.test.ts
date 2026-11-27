@@ -17,15 +17,9 @@ import {
 } from '../../../db/schema';
 import { createTestDatabase } from '../../../db/testing';
 import { MemoryFileStore } from '../../../services/fileStore';
-import {
-  BackupError,
-  backupFileName,
-  backupsToDelete,
-  collectBackup,
-  isAutoBackupDue,
-  packBackup,
-  unpackBackup,
-} from '../backupFile';
+import { BackupError, backupFileName, backupsToDelete, isAutoBackupDue } from '../backupFile';
+import { createBackupArchive, openBackupArchive, type BackupEnv } from '../backupJobs';
+import { MemoryArchive } from './helpers/memoryArchive';
 import { importLnReaderBackup, parseLnReaderBackup } from '../lnreaderImport';
 import { restoreMerging, restoreReplacing } from '../restore';
 
@@ -36,6 +30,22 @@ const OPTIONS = {
   includeTranslations: true,
   now: 1_000,
 };
+
+function envOf(
+  db: AppDatabase,
+  files: MemoryFileStore,
+  zips: Map<string, Uint8Array>,
+  options = OPTIONS,
+): BackupEnv {
+  return {
+    db,
+    files,
+    archive: new MemoryArchive(files, zips),
+    schemaVersion: options.schemaVersion,
+    appVersion: options.appVersion,
+    now: () => options.now,
+  };
+}
 
 /** A phone with one imported book (3 chapters), a shelf, a quote in a folder and history. */
 function seed(db: AppDatabase, files: MemoryFileStore, title = 'Sample Saga') {
@@ -111,16 +121,38 @@ function seed(db: AppDatabase, files: MemoryFileStore, title = 'Sample Saga') {
   return { novelId, chapterIds };
 }
 
-function backupOf(db: AppDatabase, files: MemoryFileStore, options = OPTIONS) {
-  return unpackBackup(packBackup(collectBackup(db, files, options)), 1);
+/**
+ * Writes the backup of a phone and opens it on another one (`target`, a new phone when
+ * not given): the content is extracted in the work folder of the target.
+ */
+async function backupOf(
+  db: AppDatabase,
+  files: MemoryFileStore,
+  options = OPTIONS,
+  target = { db: createTestDatabase().db, files: new MemoryFileStore() },
+) {
+  const zips = new Map<string, Uint8Array>();
+  await createBackupArchive(envOf(db, files, zips, options), 'file:///backup.zip', {
+    includeChapters: options.includeChapters,
+    includeTranslations: options.includeTranslations,
+    localOutput: true,
+  });
+  const opened = await openBackupArchive(
+    envOf(target.db, target.files, zips, { ...options, schemaVersion: 1 }),
+    'file:///backup.zip',
+  );
+  if (opened.kind !== 'lnbook') {
+    throw new Error('not a backup');
+  }
+  return opened.content;
 }
 
 describe('backup file', () => {
-  it('holds the database, the files and a manifest, and never the secrets', () => {
+  it('holds the database, the files and a manifest, and never the secrets', async () => {
     const { db } = createTestDatabase();
     const files = new MemoryFileStore();
     const { novelId, chapterIds } = seed(db, files);
-    const backup = backupOf(db, files);
+    const backup = await backupOf(db, files);
     expect(backup.manifest).toMatchObject({
       app: 'LNBook',
       schemaVersion: 1,
@@ -139,28 +171,36 @@ describe('backup file', () => {
     );
   });
 
-  it('can leave the chapters out', () => {
+  it('can leave the chapters out', async () => {
     const { db } = createTestDatabase();
     const files = new MemoryFileStore();
     const { novelId } = seed(db, files);
-    const backup = backupOf(db, files, { ...OPTIONS, includeChapters: false });
+    const backup = await backupOf(db, files, { ...OPTIONS, includeChapters: false });
     expect([...backup.files.keys()]).toEqual([`novels/${novelId}/cover.jpg`]);
     expect(backup.manifest.includesChapters).toBe(false);
   });
 
-  it('refuses other files and backups made by a newer app', () => {
-    expect(() => unpackBackup(new Uint8Array([1, 2, 3]), 1)).toThrow(BackupError);
-    expect(() => unpackBackup(zipSync({ 'a.txt': strToU8('x') }), 1)).toThrow('No manifest');
+  it('refuses other files and backups made by a newer app', async () => {
+    const zips = new Map<string, Uint8Array>();
+    zips.set('file:///junk.bin', new Uint8Array([1, 2, 3]));
+    zips.set('file:///other.zip', zipSync({ 'a.txt': strToU8('x') }));
+    const phone = createTestDatabase();
+    const phoneFiles = new MemoryFileStore();
+    const env = envOf(phone.db, phoneFiles, zips);
+    expect(await openBackupArchive(env, 'file:///junk.bin')).toEqual({ kind: 'other' });
+    expect(await openBackupArchive(env, 'file:///other.zip')).toEqual({ kind: 'other' });
+    // Nothing is left in the work folder.
+    expect(phoneFiles.files.size).toBe(0);
+
     const { db } = createTestDatabase();
     const files = new MemoryFileStore();
     seed(db, files);
-    const packed = packBackup(collectBackup(db, files, { ...OPTIONS, schemaVersion: 9 }));
-    try {
-      unpackBackup(packed, 1);
-      throw new Error('should have failed');
-    } catch (error) {
-      expect((error as BackupError).code).toBe('tooRecent');
-    }
+    await expect(backupOf(db, files, { ...OPTIONS, schemaVersion: 9 })).rejects.toMatchObject({
+      code: 'tooRecent',
+    });
+    await expect(backupOf(db, files, { ...OPTIONS, schemaVersion: 9 })).rejects.toBeInstanceOf(
+      BackupError,
+    );
   });
 
   it('names the files by date and keeps the five most recent', () => {
@@ -186,16 +226,19 @@ describe('backup file', () => {
 });
 
 describe('restore', () => {
-  it('replaces everything on another phone', () => {
+  it('replaces everything on another phone', async () => {
     const source = createTestDatabase();
     const sourceFiles = new MemoryFileStore();
     const { novelId, chapterIds } = seed(source.db, sourceFiles);
-    const backup = backupOf(source.db, sourceFiles);
 
     const target = createTestDatabase();
     const targetFiles = new MemoryFileStore();
     seed(target.db, targetFiles, 'Other Book');
     targetFiles.writeText('novels/99/chapters/1.html', 'old');
+    const backup = await backupOf(source.db, sourceFiles, OPTIONS, {
+      db: target.db,
+      files: targetFiles,
+    });
 
     const summary = restoreReplacing(target.db, targetFiles, backup);
     expect(summary.novelsAdded).toBe(1);
@@ -217,13 +260,19 @@ describe('restore', () => {
     ).toBe('"dark"');
   });
 
-  it('marks chapters as not downloaded when the backup has no chapter files', () => {
+  it('marks chapters as not downloaded when the backup has no chapter files', async () => {
     const source = createTestDatabase();
     const sourceFiles = new MemoryFileStore();
     seed(source.db, sourceFiles);
-    const backup = backupOf(source.db, sourceFiles, { ...OPTIONS, includeChapters: false });
     const target = createTestDatabase();
-    restoreReplacing(target.db, new MemoryFileStore(), backup);
+    const targetFiles = new MemoryFileStore();
+    const backup = await backupOf(
+      source.db,
+      sourceFiles,
+      { ...OPTIONS, includeChapters: false },
+      { db: target.db, files: targetFiles },
+    );
+    restoreReplacing(target.db, targetFiles, backup);
     const restored = target.db.select().from(chapters).all();
     expect(restored).toHaveLength(3);
     expect(restored.every((chapter) => chapter.filePath === null && !chapter.isDownloaded)).toBe(
@@ -232,15 +281,18 @@ describe('restore', () => {
     expect(restored[0].isRead).toBe(true);
   });
 
-  it('merges: adds missing novels with their files under new ids', () => {
+  it('merges: adds missing novels with their files under new ids', async () => {
     const source = createTestDatabase();
     const sourceFiles = new MemoryFileStore();
     seed(source.db, sourceFiles);
-    const backup = backupOf(source.db, sourceFiles);
 
     const target = createTestDatabase();
     const targetFiles = new MemoryFileStore();
     const mine = seed(target.db, targetFiles, 'Other Book');
+    const backup = await backupOf(source.db, sourceFiles, OPTIONS, {
+      db: target.db,
+      files: targetFiles,
+    });
 
     const summary = restoreMerging(target.db, targetFiles, backup);
     expect(summary).toMatchObject({ novelsAdded: 1, novelsUpdated: 0 });
@@ -280,7 +332,7 @@ describe('restore', () => {
     expect(target.db.select().from(settings).all()).toHaveLength(2);
   });
 
-  it('merges: keeps the most advanced progress of a novel present on both sides', () => {
+  it('merges: keeps the most advanced progress of a novel present on both sides', async () => {
     const source = createTestDatabase();
     const sourceFiles = new MemoryFileStore();
     const theirs = seed(source.db, sourceFiles);
@@ -289,11 +341,14 @@ describe('restore', () => {
       .set({ progress: 0.6, positionAnchor: '{"b":4}' })
       .where(eq(chapters.id, theirs.chapterIds[1]))
       .run();
-    const backup = backupOf(source.db, sourceFiles);
 
     const target = createTestDatabase();
     const targetFiles = new MemoryFileStore();
     const mine = seed(target.db, targetFiles);
+    const backup = await backupOf(source.db, sourceFiles, OPTIONS, {
+      db: target.db,
+      files: targetFiles,
+    });
     target.db
       .update(chapters)
       .set({ isRead: false, progress: 0.2, readAt: null })
@@ -316,7 +371,7 @@ describe('restore', () => {
     expect(target.db.select().from(readingSessions).all()).toHaveLength(1);
   });
 
-  it('merges installed sources with their code', () => {
+  it('merges installed sources with their code', async () => {
     const source = createTestDatabase();
     const sourceFiles = new MemoryFileStore();
     source.db
@@ -331,9 +386,12 @@ describe('restore', () => {
       })
       .run();
     sourceFiles.writeText('plugins/demo/index.js', 'code');
-    const backup = backupOf(source.db, sourceFiles);
     const target = createTestDatabase();
     const targetFiles = new MemoryFileStore();
+    const backup = await backupOf(source.db, sourceFiles, OPTIONS, {
+      db: target.db,
+      files: targetFiles,
+    });
     restoreMerging(target.db, targetFiles, backup);
     expect(target.db.select().from(plugins).all()).toHaveLength(1);
     expect(targetFiles.readText('plugins/demo/index.js')).toBe('code');

@@ -177,10 +177,18 @@ d'autoriser LNBook à installer des applications.
 
 Dans **Plus → Sauvegarde et restauration** :
 
-- **Créer une sauvegarde** : bibliothèque, catégories, progression, positions de lecture,
-  citations et dossiers, historique, statistiques, réglages, glossaires et plugins installés, avec
-  en option les chapitres téléchargés, les livres importés et les traductions.
-- **Restaurer** une sauvegarde, en remplaçant ou en fusionnant avec les données actuelles.
+- **Créer une sauvegarde** complète, pour passer sur un autre téléphone : bibliothèque, livres
+  EPUB/TXT importés, chapitres téléchargés, traductions, couvertures, progression et positions de
+  lecture, temps de lecture (réel et estimé), historique, citations et dossiers, statistiques,
+  réglages, glossaires, sources et leurs réglages. La clé DeepL n'est jamais incluse. Le fichier
+  est écrit en flux (quelle que soit la taille de la bibliothèque), dans un dossier du téléphone
+  ou partagé vers Drive, un e-mail…, puis relu et vérifié (sommes de contrôle SHA-256) avant
+  d'annoncer la réussite, avec sa taille.
+- **Restaurer** une sauvegarde, en remplaçant tout ou en fusionnant avec les données actuelles
+  (la progression la plus avancée est gardée, sans doublons). La sauvegarde est d'abord extraite
+  et vérifiée à part, et une **sauvegarde de sécurité** complète du téléphone est faite
+  automatiquement : en cas d'échec rien ne change, et « Annuler la dernière restauration » permet
+  de revenir en arrière.
 - **Sauvegarde automatique** quotidienne ou hebdomadaire dans un dossier choisi.
 - **Importer une sauvegarde LNReader** : bibliothèque, catégories, progression et historique.
 

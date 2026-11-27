@@ -14,7 +14,7 @@ appId: com.redcodesnoo.lnbook
     element: 'Create a backup'
     direction: UP
 - tapOn: 'Create a backup'
-- assertVisible: 'Downloaded chapters and imported books'
+- assertVisible: 'Complete backup.*'
 - tapOn: 'Cancel'
 - tapOn: 'Back'
 - tapOn: 'About'

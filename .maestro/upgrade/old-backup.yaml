@@ -1,0 +1,12 @@
+# App 1.1.0: tries to create a backup (share). The result is read from the app log.
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Backup and restore'
+- tapOn: 'Create a backup'
+- tapOn: 'Share'
+- extendedWaitUntil:
+    visible: 'The backup failed'
+    timeout: 300000
+- takeScreenshot: shot-old-backup

@@ -8,7 +8,7 @@ import {
   updateDownloadService,
 } from '../../modules/lnbook-system';
 
-type Owner = 'downloads' | 'translation';
+type Owner = 'downloads' | 'translation' | 'backup';
 
 const active = new Set<Owner>();
 

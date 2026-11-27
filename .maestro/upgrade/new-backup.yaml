@@ -1,0 +1,27 @@
+# New version: creates a complete backup and hands it to the share sheet, then checks the
+# result dialog (written, read back and checked).
+appId: com.redcodesnoo.lnbook
+---
+- launchApp
+- tapOn: 'More'
+- tapOn: 'Backup and restore'
+- tapOn: 'Create a backup'
+- assertVisible: 'Complete backup.*'
+- tapOn: 'Share'
+- extendedWaitUntil:
+    visible: '.*the backup….*'
+    timeout: 20000
+    optional: true
+- takeScreenshot: shot-new-backup-progress
+# The share sheet covers the app once the backup is written and checked.
+- extendedWaitUntil:
+    notVisible: '.*the backup….*'
+    timeout: 900000
+- takeScreenshot: shot-new-backup-share
+- back
+- extendedWaitUntil:
+    visible: 'Backup done'
+    timeout: 60000
+- assertVisible: 'Size: .*'
+- assertVisible: 'The file was checked.*'
+- takeScreenshot: shot-new-backup-done

@@ -312,7 +312,7 @@ export async function downloadAndInstall(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 50));
   // Never blocks the installation: the data stays in place during an update anyway.
   try {
-    writeSafetyBackup();
+    await writeSafetyBackup();
   } catch {
     // Already logged by the backup.
   }

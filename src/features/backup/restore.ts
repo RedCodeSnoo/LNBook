@@ -5,6 +5,7 @@ import type { AppDatabase } from '../../db/client';
 import type { FileStore } from '../../services/fileStore';
 import {
   BACKUP_TABLES,
+  FILE_ROOTS,
   insertRow,
   readTable,
   tableColumns,
@@ -41,30 +42,57 @@ function fixMissingChapterFiles(db: AppDatabase, files: FileStore): void {
   }
 }
 
-/** Replaces everything on the phone by the content of the backup. */
+/**
+ * Replaces everything on the phone by the content of the backup. The folders of the app
+ * are swapped with the extracted ones before the database is replaced; if anything fails,
+ * the folders of the phone are put back and the database transaction is rolled back, so
+ * the phone stays exactly as it was.
+ */
 export function restoreReplacing(
   db: AppDatabase,
   files: FileStore,
   backup: BackupContent,
 ): RestoreSummary {
-  db.transaction((tx) => {
-    tx.run(sql.raw('DELETE FROM downloads'));
-    for (const table of [...BACKUP_TABLES].reverse()) {
-      tx.run(sql.raw(`DELETE FROM "${table}"`));
-    }
-    for (const table of BACKUP_TABLES) {
-      const columns = tableColumns(db, table);
-      for (const row of backup.tables[table]) {
-        insertRow(tx, table, columns, row);
+  const previous = `${backup.stagingDir}/previous`;
+  const movedAside: string[] = [];
+  const placed: string[] = [];
+  try {
+    for (const root of FILE_ROOTS) {
+      if (files.exists(root)) {
+        files.move(root, `${previous}/${root}`);
+        movedAside.push(root);
       }
     }
-  });
-  for (const root of ['novels', 'plugins', 'fonts']) {
-    files.delete(root);
+    for (const root of FILE_ROOTS) {
+      const staged = `${backup.stagingDir}/files/${root}`;
+      if (files.exists(staged)) {
+        files.move(staged, root);
+        placed.push(root);
+      }
+    }
+    db.transaction((tx) => {
+      tx.run(sql.raw('DELETE FROM downloads'));
+      for (const table of [...BACKUP_TABLES].reverse()) {
+        tx.run(sql.raw(`DELETE FROM "${table}"`));
+      }
+      for (const table of BACKUP_TABLES) {
+        const columns = tableColumns(db, table);
+        for (const row of backup.tables[table]) {
+          insertRow(tx, table, columns, row);
+        }
+      }
+    });
+  } catch (error) {
+    for (const root of placed) {
+      files.delete(root);
+    }
+    for (const root of movedAside) {
+      files.move(`${previous}/${root}`, root);
+    }
+    throw error;
   }
-  for (const [path, data] of backup.files) {
-    files.writeBytes(path, data);
-  }
+  // The data of the phone is in the safety backup made just before.
+  files.delete(previous);
   fixMissingChapterFiles(db, files);
   return {
     novelsAdded: backup.tables.novels.length,
@@ -100,6 +128,117 @@ const remapPath = (path: unknown, from: number, to: number): unknown =>
     : path;
 
 /**
+ * Reading activity of a novel present on both phones: sessions, history and quotes of the
+ * backup that the phone does not have yet are added, never twice (merging the same backup
+ * again adds nothing). A real session replaces an estimated one on the same chapter, as in
+ * the reader; an estimate never adds to a chapter that already has time. Returns true
+ * when something was added.
+ */
+function mergeActivity(
+  db: AppDatabase,
+  columns: Record<BackupTable, Set<string>>,
+  novelId: number,
+  sameChapter: Map<unknown, number>,
+  folderIds: Map<unknown, number>,
+  theirs: { sessions: Row[]; history: Row[]; quotes: Row[]; links: Map<unknown, Row[]> },
+): boolean {
+  let changed = false;
+  const mapChapter = (id: unknown) =>
+    id === null || id === undefined ? null : (sameChapter.get(id) ?? undefined);
+
+  const mySessions = db.all<Row>(
+    sql`SELECT id, chapter_id, started_at, mode FROM reading_sessions WHERE novel_id = ${novelId}`,
+  );
+  const sessionKey = (chapter: unknown, startedAt: unknown, mode: unknown) =>
+    `${String(chapter)}|${String(startedAt)}|${String(mode)}`;
+  const knownSessions = new Set(
+    mySessions.map((row) => sessionKey(row.chapter_id, row.started_at, row.mode)),
+  );
+  const timedChapters = new Set(mySessions.map((row) => row.chapter_id));
+  for (const session of theirs.sessions) {
+    const chapterId = mapChapter(session.chapter_id);
+    if (chapterId === undefined) {
+      continue;
+    }
+    if (knownSessions.has(sessionKey(chapterId, session.started_at, session.mode))) {
+      continue;
+    }
+    if (session.mode === 'estimated' && timedChapters.has(chapterId)) {
+      continue;
+    }
+    if (session.mode !== 'estimated' && chapterId !== null) {
+      db.run(
+        sql`DELETE FROM reading_sessions WHERE novel_id = ${novelId} AND chapter_id = ${chapterId} AND mode = 'estimated'`,
+      );
+    }
+    insertRow(db, 'reading_sessions', columns.reading_sessions, {
+      ...without(session, 'id'),
+      novel_id: novelId,
+      chapter_id: chapterId,
+    });
+    knownSessions.add(sessionKey(chapterId, session.started_at, session.mode));
+    timedChapters.add(chapterId);
+    changed = true;
+  }
+
+  for (const entry of theirs.history) {
+    const chapterId = mapChapter(entry.chapter_id);
+    if (chapterId === undefined || chapterId === null) {
+      continue;
+    }
+    const mine = db.get<Row | undefined>(
+      sql`SELECT id, last_read_at, total_ms FROM history WHERE chapter_id = ${chapterId}`,
+    );
+    if (!mine) {
+      insertRow(db, 'history', columns.history, {
+        ...without(entry, 'id'),
+        novel_id: novelId,
+        chapter_id: chapterId,
+      });
+      changed = true;
+    } else if (
+      Number(entry.last_read_at) > Number(mine.last_read_at) ||
+      Number(entry.total_ms) > Number(mine.total_ms)
+    ) {
+      db.run(
+        sql`UPDATE history SET last_read_at = max(last_read_at, ${Number(entry.last_read_at) || 0}), total_ms = max(total_ms, ${
+          Number(entry.total_ms) || 0
+        }) WHERE id = ${mine.id as number}`,
+      );
+      changed = true;
+    }
+  }
+
+  const myQuotes = db.all<Row>(
+    sql`SELECT id, chapter_id, text FROM quotes WHERE novel_id = ${novelId}`,
+  );
+  const quoteKey = (chapter: unknown, text: unknown) => `${String(chapter)}|${String(text)}`;
+  const knownQuotes = new Map(myQuotes.map((row) => [quoteKey(row.chapter_id, row.text), row]));
+  for (const quote of theirs.quotes) {
+    const chapterId = mapChapter(quote.chapter_id) ?? null;
+    let quoteId = knownQuotes.get(quoteKey(chapterId, quote.text))?.id as number | undefined;
+    if (quoteId === undefined) {
+      quoteId = insertReturningId(db, 'quotes', columns.quotes, {
+        ...without(quote, 'id'),
+        novel_id: novelId,
+        chapter_id: chapterId,
+      });
+      knownQuotes.set(quoteKey(chapterId, quote.text), { id: quoteId });
+      changed = true;
+    }
+    for (const link of theirs.links.get(quote.id) ?? []) {
+      const folderId = folderIds.get(link.folder_id);
+      if (folderId !== undefined) {
+        db.run(
+          sql`INSERT OR IGNORE INTO quote_folder_items (quote_id, folder_id) VALUES (${quoteId}, ${folderId})`,
+        );
+      }
+    }
+  }
+  return changed;
+}
+
+/**
  * Adds what the backup has and the phone lacks, and keeps the most advanced reading
  * progress. Settings and what already exists on the phone are never replaced.
  */
@@ -112,8 +251,8 @@ export function restoreMerging(
     BACKUP_TABLES.map((table) => [table, tableColumns(db, table)]),
   ) as Record<BackupTable, Set<string>>;
   const summary: RestoreSummary = { novelsAdded: 0, novelsUpdated: 0, filesWritten: 0 };
-  /** Files to write once the database part succeeded: [path on this phone, data]. */
-  const pendingFiles: [string, Uint8Array][] = [];
+  /** Files to move in place: [path on this phone, extracted copy]. */
+  const pendingFiles: [string, string][] = [];
   const group = (rows: Row[], key: string) => {
     const map = new Map<unknown, Row[]>();
     for (const row of rows) {
@@ -156,9 +295,9 @@ export function restoreMerging(
     for (const row of backup.tables.plugins) {
       if (!knownPlugins.has(row.id)) {
         insertRow(database, 'plugins', columns.plugins, row);
-        for (const [path, data] of backup.files) {
+        for (const [path, staged] of backup.files) {
           if (path.startsWith(`plugins/${String(row.id)}/`)) {
-            pendingFiles.push([path, data]);
+            pendingFiles.push([path, staged]);
           }
         }
       }
@@ -201,6 +340,8 @@ export function restoreMerging(
           ]),
         );
         let changed = false;
+        /** Chapter of the backup → the same chapter on this phone. */
+        const sameChapter = new Map<unknown, number>();
         for (const chapter of chaptersByNovel.get(oldId) ?? []) {
           const mine = byKey.get(
             chapter.source_path
@@ -210,6 +351,7 @@ export function restoreMerging(
           if (!mine) {
             continue;
           }
+          sameChapter.set(chapter.id, mine.id as number);
           const read = Number(mine.is_read) === 1 || Number(chapter.is_read) === 1;
           const progress = Math.max(Number(mine.progress) || 0, Number(chapter.progress) || 0);
           const favorite = Number(mine.is_favorite) === 1 || Number(chapter.is_favorite) === 1;
@@ -232,6 +374,23 @@ export function restoreMerging(
         if (Number(novel.in_library) === 1 && Number(current.in_library) !== 1) {
           tx.run(sql`UPDATE novels SET in_library = 1 WHERE id = ${currentId}`);
           changed = true;
+        }
+        if (
+          mergeActivity(database, columns, currentId, sameChapter, folderIds, {
+            sessions: sessionsByNovel.get(oldId) ?? [],
+            history: historyByNovel.get(oldId) ?? [],
+            quotes: quotesByNovel.get(oldId) ?? [],
+            links: linksByQuote,
+          })
+        ) {
+          changed = true;
+        }
+        if (current.last_read_chapter_id === null && novel.last_read_chapter_id !== null) {
+          const mapped = sameChapter.get(novel.last_read_chapter_id);
+          if (mapped !== undefined) {
+            tx.run(sql`UPDATE novels SET last_read_chapter_id = ${mapped} WHERE id = ${currentId}`);
+            changed = true;
+          }
         }
         if (changed) {
           summary.novelsUpdated += 1;
@@ -290,9 +449,9 @@ export function restoreMerging(
           [chapter.file_path, filePath],
           [chapter.original_file_path, originalPath],
         ] as const) {
-          const data = typeof from === 'string' ? backup.files.get(from) : undefined;
-          if (data && to) {
-            pendingFiles.push([to, data]);
+          const staged = typeof from === 'string' ? backup.files.get(from) : undefined;
+          if (staged && to) {
+            pendingFiles.push([to, staged]);
           }
         }
         for (const translation of translationsByChapter.get(chapter.id) ?? []) {
@@ -306,9 +465,9 @@ export function restoreMerging(
             chapter_id: id,
             file_path: to,
           });
-          const data = backup.files.get(from);
-          if (data) {
-            pendingFiles.push([to, data]);
+          const staged = backup.files.get(from);
+          if (staged) {
+            pendingFiles.push([to, staged]);
           }
         }
       }
@@ -318,12 +477,12 @@ export function restoreMerging(
         );
       }
       // Other files of the novel: covers, images, kept stylesheet.
-      for (const [path, data] of backup.files) {
+      for (const [path, staged] of backup.files) {
         if (
           path.startsWith(`novels/${oldId}/`) &&
           !/^novels\/\d+\/(chapters|translations)\//.test(path)
         ) {
-          pendingFiles.push([remapPath(path, oldId, newId) as string, data]);
+          pendingFiles.push([remapPath(path, oldId, newId) as string, staged]);
         }
       }
 
@@ -396,11 +555,27 @@ export function restoreMerging(
         insertRow(database, 'text_replacements', columns.text_replacements, without(rule, 'id'));
       }
     }
+
+    // Files are moved while the transaction is open: if one cannot be moved, the database
+    // is rolled back and the files already moved are removed again.
+    const moved: string[] = [];
+    try {
+      for (const [path, staged] of pendingFiles) {
+        if (files.exists(path)) {
+          // Leftover of a deleted novel under a reused id: kept aside, never overwritten.
+          files.move(path, `${backup.stagingDir}/previous/${path}`);
+        }
+        files.move(staged, path);
+        moved.push(path);
+      }
+    } catch (error) {
+      for (const path of moved) {
+        files.delete(path);
+      }
+      throw error;
+    }
   });
 
-  for (const [path, data] of pendingFiles) {
-    files.writeBytes(path, data);
-  }
   summary.filesWritten = pendingFiles.length;
   fixMissingChapterFiles(db, files);
   return summary;

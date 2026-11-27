@@ -67,6 +67,11 @@ jobs:
           key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
           key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      # Backup archives (Kotlin, streamed): run on the computer with a 64 MB heap.
+      - name: Native unit tests
+        working-directory: android
+        run: ./gradlew :lnbook-system:testDebugUnitTest --no-daemon
+
       - uses: actions/upload-artifact@v7
         with:
           name: LNBook-apk
@@ -149,3 +154,91 @@ jobs:
           path: |
             ~/.maestro/tests/**
           retention-days: 7
+
+  # Informative only, like the flows above: installs the published release on an emulator,
+  # builds a large library, installs this version over it and checks that nothing was lost,
+  # then makes a backup with this version and checks it on the computer.
+  upgrade:
+    name: Upgrade from the published version (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download the published APK
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release view --json tagName -q .tagName)
+          gh release download "$TAG" -p '*.apk' -D "$RUNNER_TEMP/published"
+          (cd "$RUNNER_TEMP/published" && gh release download "$TAG" -p '*.apk.sha256' && sha256sum -c ./*.sha256)
+          VERSION="${TAG#v}"
+          NEXT="${VERSION%.*}.$(( ${VERSION##*.} + 1 ))"
+          echo "apk=$(ls "$RUNNER_TEMP"/published/*.apk)" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Published $TAG, this build is $NEXT"
+
+      # Same signature as the releases, and a higher version: an update, not a new app.
+      - name: Build x86_64 APK signed with the release key
+        id: apk
+        uses: ./.github/actions/build-apk
+        with:
+          version: ${{ steps.published.outputs.next }}
+          architectures: x86_64
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Upgrade test
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          OLD_APK: ${{ steps.published.outputs.apk }}
+          NEW_APK: ${{ steps.apk.outputs.apk-path }}
+          MAESTRO_CLI_NO_ANALYTICS: '1'
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disk-size: 8192M
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: scripts/ci-upgrade.sh "$OLD_APK" "$NEW_APK" upgrade-results
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: upgrade-results
+          path: |
+            upgrade-results/**
+            ~/.maestro/tests/**/shot-*.png
+          if-no-files-found: ignore
+          retention-days: 14

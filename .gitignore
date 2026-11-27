@@ -54,3 +54,4 @@ Thumbs.db
 # Local test book (never committed)
 demo.epub
 *:Zone.Identifier
+__pycache__/

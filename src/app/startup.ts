@@ -8,7 +8,9 @@ import { loadSettings } from '../features/settings/settingsStore';
 import i18n, { initI18n } from '../i18n';
 import { removeVisitedNovels } from '../features/browse/sourceNovels';
 import { seedDefaultRepository } from '../plugins/pluginManager';
+import { cleanBackupWork } from '../features/backup/backupJobs';
 import { errorLog } from '../services/deviceErrorLog';
+import { deviceFiles } from '../services/deviceFileStore';
 import { installErrorLog } from '../services/errorLog';
 
 /** Creates the default shelves on the very first launch only. */
@@ -37,6 +39,11 @@ export function startApp(): StartupResult {
     seedDefaultRepository(getDb());
     // Novels only looked at while browsing are not kept from one launch to the next.
     removeVisitedNovels(getDb());
+    try {
+      cleanBackupWork(deviceFiles);
+    } catch (error) {
+      console.warn('Cannot clean the backup work folder', error);
+    }
     return { ok: true };
   } catch (error) {
     console.error('Startup failed', error);
